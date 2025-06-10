@@ -387,13 +387,13 @@ class Interp {
 	}
 
 	function resolve(id: String): Dynamic {
-		if(staticVariables.exists(id))
-			return staticVariables.get(id);
-
 		if (locals.exists(id)) {
 			var l = locals.get(id);
 			return l.r;
 		}
+
+		if(staticVariables.exists(id))
+			return staticVariables.get(id);
 
 		if (variables.exists(id)) {
 			var v = variables.get(id);
@@ -435,9 +435,10 @@ class Interp {
 			case EIdent(id):
 				return resolve(id);
 			case EVar(n, _, v, isConst, s):
-				var v = (v == null) ? null : expr(v);
-				if(s == true) if(!staticVariables.exists(n)) staticVariables.set(n, v);
-				else {
+				var v = (v == null ? null : expr(v));
+				if(s == true) {
+					if(!staticVariables.exists(n)) staticVariables.set(n, v);
+				} else {
 					declared.push({n: n, old: locals.get(n)});
 					locals.set(n, {r: v, const: isConst});
 				}
