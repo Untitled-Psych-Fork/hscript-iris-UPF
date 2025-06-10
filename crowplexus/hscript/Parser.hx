@@ -113,6 +113,9 @@ class Parser {
 	var ops: Array<Bool>;
 	var idents: Array<Bool>;
 	var uid: Int = 0;
+	var abductCount:Int = 0;
+	var abducts = ["function", "if", "for", "while", "try", "switch"];
+	var sureStaticModifier:Bool = false;
 
 	#if hscriptPos
 	var origin: String;
@@ -182,6 +185,9 @@ class Parser {
 	}
 
 	public inline function error(err, pmin, pmax) {
+		if(sureStaticModifier) sureStaticModifier = false;
+		if(abductCount > 0) abductCount = 0;
+
 		if (!resumeErrors)
 			#if hscriptPos
 			throw new Error(err, pmin, pmax, origin, line);
@@ -413,7 +419,9 @@ class Parser {
 		#end
 		switch (tk) {
 			case TId(id):
+				if(abducts.contains(id)) abductCount++;
 				var e = parseStructure(id);
+				if(abducts.contains(id)) abductCount--;
 				if (e == null)
 					e = mk(EIdent(id));
 				return parseExprNext(e);
@@ -423,7 +431,9 @@ class Parser {
 				tk = token();
 				if (tk == TPClose) {
 					ensureToken(TOp("->"));
+					abductCount++;
 					var eret = parseExpr();
+					abductCount--;
 					return mk(EFunction([], mk(EReturn(eret), p1)), p1);
 				}
 				push(tk);
@@ -487,13 +497,15 @@ class Parser {
 						push(tk);
 				}
 				var a = new Array();
-				while (true) {
+				abductCount++;
+				while( true ) {
 					parseFullExpr(a);
 					tk = token();
-					if (tk == TBrClose || (resumeErrors && tk == TEof))
+					if( tk == TBrClose || (resumeErrors && tk == TEof) )
 						break;
 					push(tk);
 				}
+				abductCount--;
 				return mk(EBlock(a), p1);
 			case TOp(op):
 				if (op == "-") {
@@ -659,6 +671,21 @@ class Parser {
 						push(TSemicolon);
 				}
 				mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenMax : pmax(e2));
+			case "static":
+				if(abductCount == 0) {
+					var t = token();
+					switch(t) {
+						case TId(byd):
+							if(byd == "var" || byd == "final" || byd == "function") {
+								sureStaticModifier = true;
+								var ret = parseStructure(byd);
+								sureStaticModifier = false;
+								return ret;
+							} else unexpected(TId(id));
+						default: unexpected(TId(id));
+					}
+				} else error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
+				null;
 			case "var", "final":
 				var ident = getIdent();
 				var tk = token();
@@ -672,7 +699,7 @@ class Parser {
 					e = parseExpr();
 				else
 					push(tk);
-				mk(EVar(ident, t, e, id == "final"), p1, (e == null) ? tokenMax : pmax(e));
+				mk(EVar(ident, t, e, id == "final", if(abductCount == 0) sureStaticModifier else false), p1, (e == null) ? tokenMax : pmax(e));
 			case "while":
 				var econd = parseExpr();
 				var e = parseExpr();
@@ -709,7 +736,7 @@ class Parser {
 					default: push(tk);
 				}
 				var inf = parseFunctionDecl();
-				mk(EFunction(inf.args, inf.body, name, inf.ret), p1, pmax(inf.body));
+				mk(EFunction(inf.args, inf.body, name, inf.ret, if(abductCount == 0) sureStaticModifier else false), p1, pmax(inf.body));
 			case "return":
 				var tk = token();
 				push(tk);
@@ -996,10 +1023,14 @@ class Parser {
 					// single arg reinterpretation of `f -> e` , `(f) -> e` and `(f:T) -> e`
 					switch (expr(e1)) {
 						case EIdent(i), EParent(expr(_) => EIdent(i)):
+							abductCount++;
 							var eret = parseExpr();
+							abductCount--;
 							return mk(EFunction([{name: i}], mk(EReturn(eret), pmin(eret))), pmin(e1));
 						case ECheckType(expr(_) => EIdent(i), t):
+							abductCount++;
 							var eret = parseExpr();
+							abductCount--;
 							return mk(EFunction([{name: i, t: t}], mk(EReturn(eret), pmin(eret))), pmin(e1));
 						default:
 					}

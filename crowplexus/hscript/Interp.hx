@@ -50,6 +50,8 @@ class DeclaredVar {
 }
 
 class Interp {
+	public var staticVariables:Map<String, Dynamic>;
+
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
@@ -87,6 +89,7 @@ class Interp {
 	}
 
 	private function resetVariables() {
+		staticVariables = new Map();
 		#if haxe3
 		variables = new Map<String, Dynamic>();
 		imports = new Map<String, Dynamic>();
@@ -162,7 +165,8 @@ class Interp {
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
-		variables.set(name, v);
+		if(staticVariables.exists(name)) staticVariables.set(name, v);
+		else variables.set(name, v);
 	}
 
 	function assign(e1: Expr, e2: Expr): Dynamic {
@@ -383,6 +387,9 @@ class Interp {
 	}
 
 	function resolve(id: String): Dynamic {
+		if(staticVariables.exists(id))
+			return staticVariables.get(id);
+
 		if (locals.exists(id)) {
 			var l = locals.get(id);
 			return l.r;
@@ -427,9 +434,13 @@ class Interp {
 				}
 			case EIdent(id):
 				return resolve(id);
-			case EVar(n, _, v, isConst):
-				declared.push({n: n, old: locals.get(n)});
-				locals.set(n, {r: (v == null) ? null : expr(v), const: isConst});
+			case EVar(n, _, v, isConst, s):
+				var v = (v == null) ? null : expr(v);
+				if(s == true) if(!staticVariables.exists(n)) staticVariables.set(n, v);
+				else {
+					declared.push({n: n, old: locals.get(n)});
+					locals.set(n, {r: v, const: isConst});
+				}
 				return null;
 			case EParent(e):
 				return expr(e);
@@ -528,7 +539,7 @@ class Interp {
 				}
 				return null; // yeah. -Crow
 
-			case EFunction(params, fexpr, name, _):
+			case EFunction(params, fexpr, name, _, s):
 				var capturedLocals = duplicate(locals);
 				var me = this;
 				var hasOpt = false, minParams = 0;
@@ -590,7 +601,9 @@ class Interp {
 				if (name != null) {
 					if (depth == 0) {
 						// global function
-						variables.set(name, f);
+						if(s == true) {
+							if(!staticVariables.exists(name)) staticVariables.set(name, f);
+						} else variables.set(name, f);
 					} else {
 						// function-in-function is a local function
 						declared.push({n: name, old: locals.get(name)});
