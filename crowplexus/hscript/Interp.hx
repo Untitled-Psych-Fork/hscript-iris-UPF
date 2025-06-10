@@ -165,8 +165,11 @@ class Interp {
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
-		if(staticVariables.exists(name)) staticVariables.set(name, v);
-		else variables.set(name, v);
+		if(staticVariables.exists(name)) {
+			staticVariables.set(name, v);
+		} else if(staticVariables.exists('$name;const')) {
+			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		} else variables.set(name, v);
 	}
 
 	function assign(e1: Expr, e2: Expr): Dynamic {
@@ -387,13 +390,13 @@ class Interp {
 	}
 
 	function resolve(id: String): Dynamic {
-		if (locals.exists(id)) {
-			var l = locals.get(id);
-			return l.r;
-		}
+		var l = locals.get(id);
+		if (l != null) return l.r;
 
 		if(staticVariables.exists(id))
 			return staticVariables.get(id);
+		else if(staticVariables.exists('$id;const'))
+			return staticVariables.get('$id;const');
 
 		if (variables.exists(id)) {
 			var v = variables.get(id);
@@ -437,7 +440,7 @@ class Interp {
 			case EVar(n, _, v, isConst, s):
 				var v = (v == null ? null : expr(v));
 				if(s == true) {
-					if(!staticVariables.exists(n)) staticVariables.set(n, v);
+					if(!staticVariables.exists(n)) staticVariables.set((isConst ? '$n;const' : n), v);
 				} else {
 					declared.push({n: n, old: locals.get(n)});
 					locals.set(n, {r: v, const: isConst});

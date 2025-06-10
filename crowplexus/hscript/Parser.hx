@@ -681,7 +681,14 @@ class Parser {
 								var ret = parseStructure(byd);
 								sureStaticModifier = false;
 								return ret;
-							} else unexpected(TId(id));
+							} else if(byd == "inline") {
+								if(!maybe(TId("function")))
+									return unexpected(TId(byd));
+								sureStaticModifier = true;
+								var ret = parseStructure("function");
+								sureStaticModifier = false;
+								return ret;
+							} else unexpected(TId(byd));
 						default: unexpected(TId(id));
 					}
 				} else error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
@@ -690,6 +697,42 @@ class Parser {
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
+				if(tk == TPOpen) {
+					if(abductCount == 0 && id == "var") {
+						var getter:Null<String> = null;
+						var setter:Null<String> = null;
+						var displayComma:Bool = false;
+						var closed:Bool = false;
+						while(true) {
+							var t = token();
+							switch(t) {
+								case TComma:
+									if(getter != null && !displayComma) {
+										displayComma = true;
+									} else unexpected(t);
+								case TId(byd):
+									if(getter == null && !displayComma) {
+										if(byd == "get" || byd == "never" || byd == "default" || byd == "null") {
+											getter = byd;
+										} else unexpected(t);
+									} else if(setter == null && displayComma) {
+										if(byd == "set" || byd == "never" || byd == "default" || byd == "null") {
+											setter = byd;
+										} else unexpected(t);
+									} else unexpected(t);
+								case TPClose:
+									if(getter != null && setter != null) closed = true;
+									else unexpected(t);
+								default:
+									unexpected(t);
+							}
+
+							if(closed) break;
+						}
+						trace('getter: $getter, setter: $setter');
+						tk = token();
+					} else unexpected(tk);
+				}
 				if (tk == TDoubleDot && allowTypes) {
 					t = parseType();
 					tk = token();
@@ -725,9 +768,32 @@ class Parser {
 			case "continue": mk(EContinue);
 			case "else": unexpected(TId(id));
 			case "inline":
-				if (!maybe(TId("function")))
-					unexpected(TId("inline"));
-				return parseStructure("function");
+				var t = token();
+				switch(t) {
+					case TId(id):
+						if(id == "static") {
+							if(!sureStaticModifier && abductCount == 0) {
+								if(abductCount == 0) {
+									var t = token();
+									switch(t) {
+										case TId(byd):
+											if(byd == "function") {
+												sureStaticModifier = true;
+												var ret = parseStructure(byd);
+												sureStaticModifier = false;
+												return ret;
+											} else unexpected(TId(id));
+										default: unexpected(TId(id));
+									}
+								} else error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
+								return null;
+							}
+						} else if(id == "function") {
+							return parseStructure("function");
+						}
+					default: //nothing here
+				}
+				unexpected(t);
 			case "function":
 				var tk = token();
 				var name = null;
