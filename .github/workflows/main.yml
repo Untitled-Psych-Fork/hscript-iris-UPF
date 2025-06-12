@@ -14,6 +14,11 @@ jobs:
         with:
           haxe-version: 4.3.6
 
+      #忘加库了😅
+      - name: Add Lib
+        run: |
+          haxelib install hxcpp --quiet
+
       - name: Testing
         run: |
           cd ./tests
