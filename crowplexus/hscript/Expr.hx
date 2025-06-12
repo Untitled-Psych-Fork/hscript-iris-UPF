@@ -64,7 +64,7 @@ enum Expr
 	EConst(c:Const);
 	EIdent(v:String);
 	EImport(v:String, as:String);
-	EVar(n:String, ?t:CType, ?e:Expr, ?isConst:Bool, ?staticModifer: Bool);
+	EVar(n:String, ?t:CType, ?e:Expr, ?getter:String, ?setter:String, ?isConst:Bool, ?staticModifer: Bool);
 	EParent(e:Expr);
 	EBlock(e:Array<Expr>);
 	EField(e:Expr, f:String, s:Bool);

@@ -694,13 +694,15 @@ class Parser {
 				} else error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
 				null;
 			case "var", "final":
+				var getter:String = "default";
+				var setter:String = "default";
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
 				if(tk == TPOpen) {
 					if(abductCount == 0 && id == "var") {
-						var getter:Null<String> = null;
-						var setter:Null<String> = null;
+						var getter1:Null<String> = null;
+						var setter1:Null<String> = null;
 						var displayComma:Bool = false;
 						var closed:Bool = false;
 						while(true) {
@@ -711,17 +713,17 @@ class Parser {
 										displayComma = true;
 									} else unexpected(t);
 								case TId(byd):
-									if(getter == null && !displayComma) {
+									if(getter1 == null && !displayComma) {
 										if(byd == "get" || byd == "never" || byd == "default" || byd == "null") {
-											getter = byd;
+											getter1 = byd;
 										} else unexpected(t);
-									} else if(setter == null && displayComma) {
+									} else if(setter1 == null && displayComma) {
 										if(byd == "set" || byd == "never" || byd == "default" || byd == "null") {
-											setter = byd;
+											setter1 = byd;
 										} else unexpected(t);
 									} else unexpected(t);
 								case TPClose:
-									if(getter != null && setter != null) closed = true;
+									if(getter1 != null && setter1 != null) closed = true;
 									else unexpected(t);
 								default:
 									unexpected(t);
@@ -729,7 +731,10 @@ class Parser {
 
 							if(closed) break;
 						}
-						trace('getter: $getter, setter: $setter');
+
+						if(getter1 != null) getter = getter1;
+						if(setter1 != null) setter = setter1;
+
 						tk = token();
 					} else unexpected(tk);
 				}
@@ -742,7 +747,7 @@ class Parser {
 					e = parseExpr();
 				else
 					push(tk);
-				mk(EVar(ident, t, e, id == "final", if(abductCount == 0) sureStaticModifier else false), p1, (e == null) ? tokenMax : pmax(e));
+				mk(EVar(ident, t, e, getter, setter, (id == "final"), if(abductCount == 0) sureStaticModifier else false), p1, (e == null) ? tokenMax : pmax(e));
 			case "while":
 				var econd = parseExpr();
 				var e = parseExpr();

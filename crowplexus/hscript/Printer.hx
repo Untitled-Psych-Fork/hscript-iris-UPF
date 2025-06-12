@@ -186,7 +186,7 @@ class Printer {
 				}
 			case EIdent(v):
 				add(v);
-			case EVar(n, t, e, c):
+			case EVar(n, t, e, gt, st, c, s):
 				if (c) {
 					add("final " + n);
 				} else {
@@ -287,7 +287,7 @@ class Printer {
 				add("break");
 			case EContinue:
 				add("continue");
-			case EFunction(params, e, name, ret):
+			case EFunction(params, e, name, ret, s):
 				add("function");
 				if (name != null)
 					add(" " + name);

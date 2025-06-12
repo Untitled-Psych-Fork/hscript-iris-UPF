@@ -1,0 +1,19 @@
+name: Main
+
+on: [push, workflow_dispatch]
+jobs:
+  SEX:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v2
+
+      - name: Install Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.3.6
+
+      - name: Testing
+        runs: |
+          cd ./tests
+          haxe linux.hxml

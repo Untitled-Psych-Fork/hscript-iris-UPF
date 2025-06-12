@@ -40,7 +40,7 @@ private enum Stop {
 @:structInit
 class LocalVar {
 	public var r: Dynamic;
-	public var const: Bool;
+	public var const:Bool;
 }
 
 @:structInit
@@ -49,21 +49,26 @@ class DeclaredVar {
 	public var old: LocalVar;
 }
 
+@:allow(crowplexus.hscript.PropertyAccessor)
 class Interp {
-	public var staticVariables:Map<String, Dynamic>;
-
 	#if haxe3
+	public var staticVariables:Map<String, Dynamic>;
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
 
 	var locals: Map<String, LocalVar>;
+	var props:Map<String, Dynamic>;
 	var binops: Map<String, Expr->Expr->Dynamic>;
+	var propertyLinks:Map<String, PropertyAccessor>;
 	#else
+	public var staticVariables:Hash<Dynamic>;
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
 
 	var locals: Hash<LocalVar>;
+	var props:Hash<Dynamic>;
 	var binops: Hash<Expr->Expr->Dynamic>;
+	var propertyLinks:Hash<PropertyAccessor>;
 	#end
 
 	var depth: Int;
@@ -79,8 +84,10 @@ class Interp {
 
 	public function new() {
 		#if haxe3
+		staticVariables = new Map();
 		locals = new Map();
 		#else
+		staticVariables = new Hash();
 		locals = new Hash();
 		#end
 		declared = new Array();
@@ -89,12 +96,15 @@ class Interp {
 	}
 
 	private function resetVariables() {
-		staticVariables = new Map();
 		#if haxe3
+		propertyLinks = new Map();
 		variables = new Map<String, Dynamic>();
+		props = new Map<String, Dynamic>();
 		imports = new Map<String, Dynamic>();
 		#else
+		propertyLinks = new Hash();
 		variables = new Hash();
+		props = new Hash();
 		imports = new Hash();
 		#end
 
@@ -165,6 +175,13 @@ class Interp {
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
+		if(propertyLinks.get(name) != null) {
+			var l = propertyLinks.get(name);
+			if(l.inState) l.set(name, v);
+			else l.link_setFunc(v);
+			return;
+		}
+
 		if(staticVariables.exists(name)) {
 			staticVariables.set(name, v);
 		} else if(staticVariables.exists('$name;const')) {
@@ -393,6 +410,12 @@ class Interp {
 		var l = locals.get(id);
 		if (l != null) return l.r;
 
+		if(propertyLinks.get(id) != null) {
+			var l = propertyLinks.get(id);
+			if(l.inState) return l.get(id);
+			else return l.link_getFunc();
+		}
+
 		if(staticVariables.exists(id))
 			return staticVariables.get(id);
 		else if(staticVariables.exists('$id;const'))
@@ -437,13 +460,29 @@ class Interp {
 				}
 			case EIdent(id):
 				return resolve(id);
-			case EVar(n, _, v, isConst, s):
+			case EVar(n, _, v, getter, setter, isConst, s):
+				if(getter == null) getter = "default";
+				if(setter == null) setter = "default";
+
 				var v = (v == null ? null : expr(v));
 				if(s == true) {
-					if(!staticVariables.exists(n)) staticVariables.set((isConst ? '$n;const' : n), v);
+					if(!staticVariables.exists(n)) staticVariables.set(n, v);
 				} else {
-					declared.push({n: n, old: locals.get(n)});
-					locals.set(n, {r: v, const: isConst});
+					if(!isConst && (getter != "default" || setter != "default")) {
+						props.set(n, v);
+						propertyLinks.set(n, new PropertyAccessor(this, () -> {
+							if(props.exists(n)) return props.get(n);
+							else throw error(EUnknownVariable(n));
+							return null;
+						}, (val) -> {
+							if(props.exists(n)) props.set(n, val);
+							else throw error(EUnknownVariable(n));
+							return val;
+						}, getter, setter));
+					} else {
+						declared.push({n: n, old: locals.get(n)});
+						locals.set(n, {r: v, const: isConst});
+					}
 				}
 				return null;
 			case EParent(e):
@@ -1011,5 +1050,69 @@ class Interp {
 		if (c == null)
 			c = resolve(cl);
 		return Type.createInstance(c, args);
+	}
+}
+
+//呵呵，我乱命名的，别在意
+class PropertyAccessor {
+	public var getter(default, null):String;
+	public var setter(default, null):String;
+	public var proxy(default, null):Interp;
+	public var inState(default, null):Bool = true;
+	public var link_getFunc(default, null):Void->Dynamic;
+	public var link_setFunc(default, null):Dynamic->Dynamic;
+
+	public function new(proxy:Interp, link_getFunc:Void->Dynamic, link_setFunc:Dynamic->Dynamic, getter1:String = "default", setter1:String = "default") {
+		this.proxy = proxy;
+		this.link_getFunc = link_getFunc;
+		this.link_setFunc = link_setFunc;
+		this.getter = getter1;
+		this.setter = setter1;
+	}
+
+	public function get(name:String):Dynamic {
+		if(link_getFunc == null && proxy == null) return null;
+		return switch(getter) {
+			case "default":
+				link_getFunc();
+			case "never":
+				throw proxy.error(ECustom('Cannot Access Read This Property -> "$name"'));
+				null;
+			case "null":
+				link_getFunc();
+			case "get":
+				if(Reflect.isFunction(proxy.variables.get('get_$name'))) {
+					inState = false;
+					var ret:Dynamic = Reflect.callMethod(null, proxy.variables.get('get_$name'), []);
+					inState = true;
+					return ret;
+				} else proxy.error(ECustom('Cannot Access Read This Property "$name" Due To Dose Not Exist Function -> "get_$name"'));
+				null;
+			default:
+				null;
+		}
+	}
+
+	public function set(name:String, value:Dynamic) {
+		if(link_setFunc == null && proxy == null) return null;
+		return switch(setter) {
+			case "default":
+				link_setFunc(value);
+			case "never":
+				throw proxy.error(ECustom('Cannot Access Write This Property -> "$name"'));
+				null;
+			case "null":
+				link_setFunc(value);
+			case "set":
+				if(Reflect.isFunction(proxy.variables.get('set_$name'))) {
+					inState = false;
+					var ret:Dynamic = Reflect.callMethod(null, proxy.variables.get('set_$name'), [value]);
+					inState = true;
+					return ret;
+				} else proxy.error(ECustom('Cannot Access Write This Property "$name" Due To Dose Not Exist Function -> "set_$name"'));
+				null;
+			default:
+				null;
+		}
 	}
 }
