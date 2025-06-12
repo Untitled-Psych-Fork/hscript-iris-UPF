@@ -4,6 +4,7 @@ import sys.io.File;
 import haxe.io.Path;
 import sys.FileSystem;
 import crowplexus.iris.Iris;
+import crowplexus.hscript.Interp;
 import crowplexus.hscript.Parser;
 import crowplexus.hscript.Printer;
 import crowplexus.hscript.Bytes;
