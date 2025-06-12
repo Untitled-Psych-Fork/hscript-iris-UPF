@@ -51,8 +51,12 @@ class DeclaredVar {
 
 @:allow(crowplexus.hscript.PropertyAccessor)
 class Interp {
+	/**
+	 * 还是觉得直接包装成静态更好一点（不模仿）
+	 */
+	public static var staticVariables:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+
 	#if haxe3
-	public var staticVariables:Map<String, Dynamic>;
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
 
@@ -61,7 +65,6 @@ class Interp {
 	var binops: Map<String, Expr->Expr->Dynamic>;
 	var propertyLinks:Map<String, PropertyAccessor>;
 	#else
-	public var staticVariables:Hash<Dynamic>;
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
 
@@ -70,6 +73,29 @@ class Interp {
 	var binops: Hash<Expr->Expr->Dynamic>;
 	var propertyLinks:Hash<PropertyAccessor>;
 	#end
+
+	/**
+	 * 反狼偷家
+	 */
+	public var parentInstance(default, set):Dynamic;
+	var _parentFields:Array<String> = [];
+	@:dox(hide) function set_parentInstance(val:Dynamic):Dynamic {
+		if(val != null) {
+			switch(Type.typeof(val)) {
+				case Type.ValueType.TObject if(!(val is Enum)):
+					_parentFields = if(val is Class) Type.getClassFields(val);
+					else Reflect.fields(val);
+				case Type.ValueType.TClass(_):
+					_parentFields = Type.getInstanceFields(Type.getClass(val));
+				case _:
+					//nothing
+			}
+		}
+
+		if(_parentFields == null) _parentFields = [];
+
+		return parentInstance = val;
+	}
 
 	var depth: Int;
 	var inTry: Bool;
@@ -84,10 +110,8 @@ class Interp {
 
 	public function new() {
 		#if haxe3
-		staticVariables = new Map();
 		locals = new Map();
 		#else
-		staticVariables = new Hash();
 		locals = new Hash();
 		#end
 		declared = new Array();
@@ -186,7 +210,12 @@ class Interp {
 			staticVariables.set(name, v);
 		} else if(staticVariables.exists('$name;const')) {
 			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		} else if(parentInstance != null) {
+			if(_parentFields.contains(name) || _parentFields.contains('set_$name')) {
+				Reflect.setProperty(parentInstance, name, v);
+			}
 		} else variables.set(name, v);
+
 	}
 
 	function assign(e1: Expr, e2: Expr): Dynamic {
@@ -195,7 +224,7 @@ class Interp {
 			case EIdent(id):
 				var l = locals.get(id);
 				if (l == null)
-					setVar(id, v)
+					setVar(id, v);
 				else {
 					if (l.const != true)
 						l.r = v;
@@ -406,6 +435,7 @@ class Interp {
 		#end
 	}
 
+	@:noCompletion static var unpackClassCache:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
 	function resolve(id: String): Dynamic {
 		var l = locals.get(id);
 		if (l != null) return l.r;
@@ -426,9 +456,26 @@ class Interp {
 			return v;
 		}
 
+		if(parentInstance != null) {
+			if(id == "this") return parentInstance;
+			if(_parentFields.contains(id) || _parentFields.contains('get_$id')) {
+				return Reflect.getProperty(parentInstance, id);
+			}
+		}
+
 		if (imports.exists(id)) {
 			var v = imports.get(id);
 			return v;
+		}
+
+		if(unpackClassCache.get(id) is Class) {
+			return unpackClassCache.get(id);
+		} else {
+			final cl = Type.resolveClass(id);
+			if(cl != null) {
+				unpackClassCache.set(id, cl);
+				return cl;
+			}
 		}
 
 		error(EUnknownVariable(id));
@@ -1038,7 +1085,10 @@ class Interp {
 			if (v != null)
 				return v;
 		}
-		return call(o, get(o, f), args);
+
+		return {
+			call(o, get(o, f), args);
+		}
 	}
 
 	function call(o: Dynamic, f: Dynamic, args: Array<Dynamic>): Dynamic {
