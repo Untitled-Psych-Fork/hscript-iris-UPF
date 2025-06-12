@@ -40,7 +40,7 @@ private enum Stop {
 @:structInit
 class LocalVar {
 	public var r: Dynamic;
-	public var const: Bool;
+	public var const:Bool;
 }
 
 @:structInit
@@ -49,20 +49,53 @@ class DeclaredVar {
 	public var old: LocalVar;
 }
 
+@:allow(crowplexus.hscript.PropertyAccessor)
 class Interp {
+	/**
+	 * 还是觉得直接包装成静态更好一点（不模仿）
+	 */
+	public static var staticVariables:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
 
 	var locals: Map<String, LocalVar>;
+	var props:Map<String, Dynamic>;
 	var binops: Map<String, Expr->Expr->Dynamic>;
+	var propertyLinks:Map<String, PropertyAccessor>;
 	#else
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
 
 	var locals: Hash<LocalVar>;
+	var props:Hash<Dynamic>;
 	var binops: Hash<Expr->Expr->Dynamic>;
+	var propertyLinks:Hash<PropertyAccessor>;
 	#end
+
+	/**
+	 * 反狼偷家
+	 */
+	public var parentInstance(default, set):Dynamic;
+	var _parentFields:Array<String> = [];
+	@:dox(hide) function set_parentInstance(val:Dynamic):Dynamic {
+		if(val != null) {
+			switch(Type.typeof(val)) {
+				case Type.ValueType.TObject if(!(val is Enum)):
+					_parentFields = if(val is Class) Type.getClassFields(val);
+					else Reflect.fields(val);
+				case Type.ValueType.TClass(_):
+					_parentFields = Type.getInstanceFields(Type.getClass(val));
+				case _:
+					//nothing
+			}
+		}
+
+		if(_parentFields == null) _parentFields = [];
+
+		return parentInstance = val;
+	}
 
 	var depth: Int;
 	var inTry: Bool;
@@ -88,10 +121,14 @@ class Interp {
 
 	private function resetVariables() {
 		#if haxe3
+		propertyLinks = new Map();
 		variables = new Map<String, Dynamic>();
+		props = new Map<String, Dynamic>();
 		imports = new Map<String, Dynamic>();
 		#else
+		propertyLinks = new Hash();
 		variables = new Hash();
+		props = new Hash();
 		imports = new Hash();
 		#end
 
@@ -162,7 +199,23 @@ class Interp {
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
-		variables.set(name, v);
+		if(propertyLinks.get(name) != null) {
+			var l = propertyLinks.get(name);
+			if(l.inState) l.set(name, v);
+			else l.link_setFunc(v);
+			return;
+		}
+
+		if(staticVariables.exists(name)) {
+			staticVariables.set(name, v);
+		} else if(staticVariables.exists('$name;const')) {
+			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		} else if(parentInstance != null) {
+			if(_parentFields.contains(name) || _parentFields.contains('set_$name')) {
+				Reflect.setProperty(parentInstance, name, v);
+			}
+		} else variables.set(name, v);
+
 	}
 
 	function assign(e1: Expr, e2: Expr): Dynamic {
@@ -171,7 +224,7 @@ class Interp {
 			case EIdent(id):
 				var l = locals.get(id);
 				if (l == null)
-					setVar(id, v)
+					setVar(id, v);
 				else {
 					if (l.const != true)
 						l.r = v;
@@ -382,20 +435,47 @@ class Interp {
 		#end
 	}
 
+	@:noCompletion static var unpackClassCache:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
 	function resolve(id: String): Dynamic {
-		if (locals.exists(id)) {
-			var l = locals.get(id);
-			return l.r;
+		var l = locals.get(id);
+		if (l != null) return l.r;
+
+		if(propertyLinks.get(id) != null) {
+			var l = propertyLinks.get(id);
+			if(l.inState) return l.get(id);
+			else return l.link_getFunc();
 		}
+
+		if(staticVariables.exists(id))
+			return staticVariables.get(id);
+		else if(staticVariables.exists('$id;const'))
+			return staticVariables.get('$id;const');
 
 		if (variables.exists(id)) {
 			var v = variables.get(id);
 			return v;
 		}
 
+		if(parentInstance != null) {
+			if(id == "this") return parentInstance;
+			if(_parentFields.contains(id) || _parentFields.contains('get_$id')) {
+				return Reflect.getProperty(parentInstance, id);
+			}
+		}
+
 		if (imports.exists(id)) {
 			var v = imports.get(id);
 			return v;
+		}
+
+		if(unpackClassCache.get(id) is Class) {
+			return unpackClassCache.get(id);
+		} else {
+			final cl = Type.resolveClass(id);
+			if(cl != null) {
+				unpackClassCache.set(id, cl);
+				return cl;
+			}
 		}
 
 		error(EUnknownVariable(id));
@@ -427,9 +507,46 @@ class Interp {
 				}
 			case EIdent(id):
 				return resolve(id);
-			case EVar(n, _, v, isConst):
-				declared.push({n: n, old: locals.get(n)});
-				locals.set(n, {r: (v == null) ? null : expr(v), const: isConst});
+			case EVar(n, _, v, getter, setter, isConst, s):
+				if(getter == null) getter = "default";
+				if(setter == null) setter = "default";
+
+				var v = (v == null ? null : expr(v));
+				if(s == true) {
+					if(!staticVariables.exists(n) && !staticVariables.exists(n + ";const")) {
+						if(isConst) staticVariables.set(n + ";const", v);
+						else {
+							staticVariables.set(n, v);
+							if(getter != "default" || setter != "default") {
+								propertyLinks.set(n, new PropertyAccessor(this, () -> {
+									if(staticVariables.exists(n)) return staticVariables.get(n);
+									else throw error(EUnknownVariable(n));
+									return null;
+								}, (val) -> {
+									if(staticVariables.exists(n)) staticVariables.set(n, val);
+									else throw error(EUnknownVariable(n));
+									return val;
+								}, getter, setter, true));
+							}
+						}
+					}
+				} else {
+					if(!isConst && (getter != "default" || setter != "default")) {
+						props.set(n, v);
+						propertyLinks.set(n, new PropertyAccessor(this, () -> {
+							if(props.exists(n)) return props.get(n);
+							else throw error(EUnknownVariable(n));
+							return null;
+						}, (val) -> {
+							if(props.exists(n)) props.set(n, val);
+							else throw error(EUnknownVariable(n));
+							return val;
+						}, getter, setter));
+					} else {
+						declared.push({n: n, old: locals.get(n)});
+						locals.set(n, {r: v, const: isConst});
+					}
+				}
 				return null;
 			case EParent(e):
 				return expr(e);
@@ -528,7 +645,7 @@ class Interp {
 				}
 				return null; // yeah. -Crow
 
-			case EFunction(params, fexpr, name, _):
+			case EFunction(params, fexpr, name, _, s):
 				var capturedLocals = duplicate(locals);
 				var me = this;
 				var hasOpt = false, minParams = 0;
@@ -590,7 +707,9 @@ class Interp {
 				if (name != null) {
 					if (depth == 0) {
 						// global function
-						variables.set(name, f);
+						if(s == true) {
+							if(!staticVariables.exists(name)) staticVariables.set(name, f);
+						} else variables.set(name, f);
 					} else {
 						// function-in-function is a local function
 						declared.push({n: name, old: locals.get(name)});
@@ -982,7 +1101,10 @@ class Interp {
 			if (v != null)
 				return v;
 		}
-		return call(o, get(o, f), args);
+
+		return {
+			call(o, get(o, f), args);
+		}
 	}
 
 	function call(o: Dynamic, f: Dynamic, args: Array<Dynamic>): Dynamic {

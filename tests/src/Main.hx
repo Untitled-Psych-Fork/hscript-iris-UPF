@@ -4,6 +4,7 @@ import sys.io.File;
 import haxe.io.Path;
 import sys.FileSystem;
 import crowplexus.iris.Iris;
+import crowplexus.hscript.Interp;
 import crowplexus.hscript.Parser;
 import crowplexus.hscript.Printer;
 import crowplexus.hscript.Bytes;
@@ -14,10 +15,19 @@ using StringTools;
 @:access(crowplexus.iris.Iris)
 class Main {
 	static function main() {
-		// mainTest();
-		// mainBytes();
-		// testIndenticalNames();
+		mainTest();
+		mainBytes();
+		testIndenticalNames();
 		testUsing();
+		mainStatic();
+	}
+
+	static function mainStatic() {
+		var sm1:Iris = new Iris(Resource.getString("assets/static_test1.hx"));
+		var sm2:Iris = new Iris(Resource.getString("assets/static_test2.hx"));
+		sm1.call("new");
+		sm2.call("new");
+		trace("Static State: " + Interp.staticVariables);
 	}
 
 	/**
