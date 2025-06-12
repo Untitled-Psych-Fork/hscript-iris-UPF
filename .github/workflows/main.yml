@@ -1,6 +1,7 @@
 name: Main
 
 on: [push, workflow_dispatch]
+
 jobs:
   SEX:
     runs-on: ubuntu-latest
