@@ -18,6 +18,15 @@ class Main {
 		mainBytes();
 		testIndenticalNames();
 		testUsing();
+		mainStatic();
+	}
+
+	static function mainStatic() {
+		var sm1:Iris = new Iris(Resource.getString("assets/static_test1.hx"));
+		var sm2:Iris = new Iris(Resource.getString("assets/static_test2.hx"));
+		sm1.call("new");
+		sm2.call("new");
+		trace("Static State: " + Interp.staticVariables);
 	}
 
 	/**
