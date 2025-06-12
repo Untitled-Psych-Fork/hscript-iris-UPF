@@ -513,7 +513,23 @@ class Interp {
 
 				var v = (v == null ? null : expr(v));
 				if(s == true) {
-					if(!staticVariables.exists(n)) staticVariables.set(n, v);
+					if(!staticVariables.exists(n) && !staticVariables.exists(n + ";const")) {
+						if(isConst) staticVariables.set(n + ";const", v);
+						else {
+							staticVariables.set(n, v);
+							if(getter != "default" || setter != "default") {
+								propertyLinks.set(n, new PropertyAccessor(this, () -> {
+									if(staticVariables.exists(n)) return staticVariables.get(n);
+									else throw error(EUnknownVariable(n));
+									return null;
+								}, (val) -> {
+									if(staticVariables.exists(n)) staticVariables.set(n, val);
+									else throw error(EUnknownVariable(n));
+									return val;
+								}, getter, setter, true));
+							}
+						}
+					}
 				} else {
 					if(!isConst && (getter != "default" || setter != "default")) {
 						props.set(n, v);
@@ -1112,12 +1128,15 @@ class PropertyAccessor {
 	public var link_getFunc(default, null):Void->Dynamic;
 	public var link_setFunc(default, null):Dynamic->Dynamic;
 
-	public function new(proxy:Interp, link_getFunc:Void->Dynamic, link_setFunc:Dynamic->Dynamic, getter1:String = "default", setter1:String = "default") {
+	var isStatic:Bool;
+
+	public function new(proxy:Interp, link_getFunc:Void->Dynamic, link_setFunc:Dynamic->Dynamic, getter1:String = "default", setter1:String = "default", isStatic:Bool = false) {
 		this.proxy = proxy;
 		this.link_getFunc = link_getFunc;
 		this.link_setFunc = link_setFunc;
 		this.getter = getter1;
 		this.setter = setter1;
+		this.isStatic = isStatic;
 	}
 
 	public function get(name:String):Dynamic {
@@ -1131,12 +1150,16 @@ class PropertyAccessor {
 			case "null":
 				link_getFunc();
 			case "get":
-				if(Reflect.isFunction(proxy.variables.get('get_$name'))) {
+				final variables = {
+					if(this.isStatic) Interp.staticVariables;
+					else proxy.variables;
+				}
+				if(Reflect.isFunction(variables.get('get_$name'))) {
 					inState = false;
-					var ret:Dynamic = Reflect.callMethod(null, proxy.variables.get('get_$name'), []);
+					var ret:Dynamic = Reflect.callMethod(null, variables.get('get_$name'), []);
 					inState = true;
 					return ret;
-				} else proxy.error(ECustom('Cannot Access Read This Property "$name" Due To Dose Not Exist Function -> "get_$name"'));
+				} else proxy.error(ECustom('Cannot Access Read This Property "$name" Due To Invalid Function -> "get_$name"'));
 				null;
 			default:
 				null;
@@ -1154,12 +1177,16 @@ class PropertyAccessor {
 			case "null":
 				link_setFunc(value);
 			case "set":
-				if(Reflect.isFunction(proxy.variables.get('set_$name'))) {
+				final variables = {
+					if(this.isStatic) Interp.staticVariables;
+					else proxy.variables;
+				}
+				if(Reflect.isFunction(variables.get('set_$name'))) {
 					inState = false;
-					var ret:Dynamic = Reflect.callMethod(null, proxy.variables.get('set_$name'), [value]);
+					var ret:Dynamic = Reflect.callMethod(null, variables.get('set_$name'), [value]);
 					inState = true;
 					return ret;
-				} else proxy.error(ECustom('Cannot Access Write This Property "$name" Due To Dose Not Exist Function -> "set_$name"'));
+				} else proxy.error(ECustom('Cannot Access Read This Property "$name" Due To Invalid Function -> "set_$name"'));
 				null;
 			default:
 				null;

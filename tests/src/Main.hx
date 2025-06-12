@@ -14,9 +14,9 @@ using StringTools;
 @:access(crowplexus.iris.Iris)
 class Main {
 	static function main() {
-		// mainTest();
-		// mainBytes();
-		// testIndenticalNames();
+		mainTest();
+		mainBytes();
+		testIndenticalNames();
 		testUsing();
 	}
 
