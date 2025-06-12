@@ -68,7 +68,7 @@ class PropertyAccessor {
 					var ret:Dynamic = Reflect.callMethod(null, variables.get('set_$name'), [value]);
 					inState = true;
 					return ret;
-				} else proxy.error(ECustom('Cannot Access Read This Property "$name" Due To Invalid Function -> "set_$name"'));
+				} else proxy.error(ECustom('Cannot Access Write This Property "$name" Due To Invalid Function -> "set_$name"'));
 				null;
 			default:
 				null;
