@@ -1099,8 +1099,7 @@ class Interp {
 					return null;
 				return Reflect.callMethod(cls, field, [o].concat(args));
 			});
-			#i
-			f IRIS_DEBUG
+			#if IRIS_DEBUG
 			trace("Registered reflection based using entry for " + name);
 			#end
 			Iris.registeredUsingEntries.push(entry);
