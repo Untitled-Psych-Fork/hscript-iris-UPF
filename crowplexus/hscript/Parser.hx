@@ -1030,7 +1030,6 @@ class Parser {
 					return mk(EIgnore(false));
 				var path = parsePath();
  				packageName = path.join(".");
-				expect(TSemicolon);
 				mk(EIgnore(false));
 			default:
 				null;
@@ -2097,7 +2096,7 @@ class Parser {
 		}
 	}
 
-	@:noCompletion public var preprocessorValues(get, set): Map<String, Dynamic>;
+	// @:noCompletion public var preprocessorValues(get, set): Map<String, Dynamic>;
 	inline function get_preprocessorValues() return this.preprocessorValues;
 	inline function set_preprocessorValues(v) return this.preprocessorValues = v;
 }
