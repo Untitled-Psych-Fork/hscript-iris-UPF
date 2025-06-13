@@ -1030,6 +1030,7 @@ class Parser {
 					return mk(EIgnore(false));
 				var path = parsePath();
  				packageName: path.join(".");
+				expect(TSemicolon);
 				mk(EIgnore(false));
 			default:
 				null;
