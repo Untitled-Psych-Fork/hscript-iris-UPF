@@ -24,11 +24,13 @@ package crowplexus.hscript;
 
 import Type.ValueType;
 import crowplexus.hscript.Expr;
+import crowplexus.hscript.IHScriptCustomBehaviour;
 import crowplexus.hscript.Tools;
 import crowplexus.iris.Iris;
 import crowplexus.iris.IrisUsingClass;
 import crowplexus.iris.utils.UsingEntry;
 import haxe.Constraints.IMap;
+import haxe.EnumTools;
 import haxe.PosInfos;
 
 private enum Stop {
@@ -52,10 +54,12 @@ class DeclaredVar {
 @:allow(crowplexus.hscript.PropertyAccessor)
 class Interp {
 	public static var staticVariables: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+	public static var getRedirects: Map<String, Dynamic->String->Dynamic> = [];
+	public static var setRedirects: Map<String, Dynamic->String->Dynamic->Dynamic> = [];
 
 	public var scriptObject(default, set): Dynamic;
 	public var parentInstance(default, set): Dynamic;
-	
+
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
@@ -80,8 +84,6 @@ class Interp {
 	var returnValue: Dynamic;
 
 	@:noCompletion static var unpackClassCache: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
-	public static var getRedirects: Map<String, Dynamic->String->Dynamic> = [];
-	public static var setRedirects: Map<String, Dynamic->String->Dynamic->Dynamic> = [];
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -166,7 +168,6 @@ class Interp {
 		binops.set("==", function(e1, e2) return me.expr(e1) == me.expr(e2));
 		binops.set("!=", function(e1, e2) return me.expr(e1) != me.expr(e2));
 		binops.set(">=", function(e1, e2) return me.expr(e1) >= me.expr(e2));
-		binops.set红包: 2/3/2023 18:43:54
 		binops.set("<=", function(e1, e2) return me.expr(e1) <= me.expr(e2));
 		binops.set(">", function(e1, e2) return me.expr(e1) > me.expr(e2));
 		binops.set("<", function(e1, e2) return me.expr(e1) < me.expr(e2));
@@ -189,7 +190,7 @@ class Interp {
 		assignOp("<<=", function(v1, v2) return v1 << v2);
 		assignOp(">>=", function(v1, v2) return v1 >> v2);
 		assignOp(">>>=", function(v1, v2) return v1 >>> v2);
-		assignOp("??=", function(v1, v2) return v1 == null ? v2 : v1);
+		assignOp("??" + "=", function(v1, v2) return v1 == null ? v2 : v1);
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
@@ -228,9 +229,23 @@ class Interp {
 		switch (Tools.expr(e1)) {
 			case EIdent(id):
 				var l = locals.get(id);
-				if (l == null)
-					setVar(id, v);
-				else {
+				if (l == null) {
+					if (parentInstance != null && (_parentFields.contains(id) || _parentFields.contains('set_$id'))) {
+						Reflect.setProperty(parentInstance, id, v);
+					} else if (scriptObject != null) {
+						if (Type.typeof(scriptObject) == TObject) {
+							Reflect.setField(scriptObject, id, v);
+						} else if (__instanceFields.contains(id)) {
+							Reflect.setProperty(scriptObject, id, v);
+						} else if (__instanceFields.contains('set_$id')) {
+							Reflect.getProperty(scriptObject, 'set_$id')(v);
+						} else {
+							setVar(id, v);
+						}
+					} else {
+						setVar(id, v);
+					}
+				} else {
 					if (l.const != true)
 						l.r = v;
 					else
@@ -272,8 +287,14 @@ class Interp {
 				if (l == null) {
 					if (parentInstance != null && (_parentFields.contains(id) || _parentFields.contains('set_$id'))) {
 						Reflect.setProperty(parentInstance, id, v);
-					} else if (scriptObject != null && (__instanceFields.contains(id) || __instanceFields.contains('set_$id'))) {
-						Reflect.setProperty(scriptObject, id, v);
+					} else if (scriptObject != null) {
+						if (__instanceFields.contains(id)) {
+							Reflect.setProperty(scriptObject, id, v);
+						} else if (__instanceFields.contains('set_$id')) {
+							Reflect.getProperty(scriptObject, 'set_$id')(v);
+						} else {
+							setVar(id, v);
+						}
 					} else {
 						setVar(id, v);
 					}
@@ -486,7 +507,7 @@ class Interp {
 
 		if (unpackClassCache.exists(id))
 			return unpackClassCache.get(id);
-		
+
 		var cl = Type.resolveClass(id);
 		if (cl != null) {
 			unpackClassCache.set(id, cl);
@@ -986,6 +1007,10 @@ class Interp {
 		var redirect: Dynamic->String->Dynamic = getRedirects.exists(cl = Type.getClassName(Type.getClass(o))) ? getRedirects[cl] : null;
 		if (redirect != null)
 			return redirect(o, f);
+		if (o is IHScriptCustomBehaviour) {
+			var obj = cast(o, IHScriptCustomBehaviour);
+			return obj.hget(f);
+		}
 		#if php
 		try {
 			return Reflect.getProperty(o, f);
@@ -993,7 +1018,10 @@ class Interp {
 			return Reflect.field(o, f);
 		}
 		#else
-		return Reflect.getProperty(o, f);
+		var v = Reflect.getProperty(o, f);
+		if (v == null)
+			v = Reflect.getProperty(Type.getClass(o), f);
+		return v;
 		#end
 	}
 
@@ -1009,4 +1037,98 @@ class Interp {
 		};
 		var redirect: Dynamic->String->Dynamic->Dynamic = setRedirects.exists(cl = Type.getClassName(Type.getClass(o))) ? setRedirects[cl] : null;
 		if (redirect != null)
-			return redirect(o, f,
+			return redirect(o, f, v);
+		if (o is IHScriptCustomBehaviour) {
+			var obj = cast(o, IHScriptCustomBehaviour);
+			return obj.hset(f, v);
+		}
+		Reflect.setProperty(o, f, v);
+		return v;
+	}
+
+	function registerUsingLocal(name: String, call: UsingCall): UsingEntry {
+		var entry = new UsingEntry(name, call);
+		usings.push(entry);
+		return entry;
+	}
+
+	function useUsing(name: String): Void {
+		for (us in Iris.registeredUsingEntries) {
+			if (us.name == name) {
+				if (usings.indexOf(us) == -1)
+					usings.push(us);
+				return;
+			}
+		}
+		var cls = Tools.getClass(name);
+		if (cls != null) {
+			var fieldName = '__irisUsing_' + StringTools.replace(name, ".", "_");
+			if (Reflect.hasField(cls, fieldName)) {
+				var fields = Reflect.field(cls, fieldName);
+				if (fields == null)
+					return;
+				var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
+					if (!fields.exists(f))
+						return null;
+					var type: ValueType = Type.typeof(o);
+					var valueType: ValueType = fields.get(f);
+					var canCall = valueType == null ? true : switch (valueType) {
+						case TEnum(null): type.match(TEnum(_));
+						case TClass(null): type.match(TClass(_));
+						case TClass(IMap):
+							type.match(TClass(IMap) | TClass(haxe.ds.ObjectMap) | TClass(haxe.ds.StringMap) | TClass(haxe.ds.IntMap) | TClass(haxe.ds.EnumValueMap));
+						default: Type.enumEq(type, valueType);
+					}
+					return canCall ? Reflect.callMethod(cls, Reflect.field(cls, f), [o].concat(args)) : null;
+				});
+				#if IRIS_DEBUG
+				trace("Registered macro based using entry for " + name);
+				#end
+				Iris.registeredUsingEntries.push(entry);
+				usings.push(entry);
+				return;
+			}
+			var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
+				if (!Reflect.hasField(cls, f))
+					return null;
+				var field = Reflect.field(cls, f);
+				if (!Reflect.isFunction(field))
+					return null;
+				var totalArgs = Tools.argCount(field);
+				if (totalArgs == 0)
+					return null;
+				return Reflect.callMethod(cls, field, [o].concat(args));
+			});
+			#i
+			f IRIS_DEBUG
+			trace("Registered reflection based using entry for " + name);
+			#end
+			Iris.registeredUsingEntries.push(entry);
+			usings.push(entry);
+			return;
+		}
+		warn(ECustom("Unknown using class " + name));
+	}
+
+	var usings: Array<UsingEntry> = [];
+
+	function fcall(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
+		for (_using in usings) {
+			var v = _using.call(o, f, args);
+			if (v != null)
+				return v;
+		}
+		return call(o, get(o, f), args);
+	}
+
+	function call(o: Dynamic, f: Dynamic, args: Array<Dynamic>): Dynamic {
+		return Reflect.callMethod(o, f, args);
+	}
+
+	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
+		var c = Type.resolveClass(cl);
+		if (c == null)
+			c = resolve(cl);
+		return Type.createInstance(c, args);
+	}
+	}
