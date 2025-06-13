@@ -1029,7 +1029,7 @@ class Parser {
 				if (tk == TSemicolon)
 					return mk(EIgnore(false));
 				var path = parsePath();
- PACKAGE: path.join(".");
+ 				packageName: path.join(".");
 				mk(EIgnore(false));
 			default:
 				null;
