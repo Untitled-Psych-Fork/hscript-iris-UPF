@@ -302,7 +302,6 @@ class Iris {
 			#end
 			} catch (e) {
 				@:privateAccess Iris.error(Std.string(e), cast {fileName: this.name, lineNumber: 0});
-				resumeError = true;
 				null;
 			}
 		}

@@ -122,7 +122,7 @@ class Parser {
 	var abductCount: Int = 0;
 	var abducts = ["function", "if", "for", "while", "try", "switch", "do"];
 	var sureStaticModifier: Bool = false;
-	var interpolationState:Bool = false;
+	@:noCompletion var interpolationState:Bool = false;
 	var compatibles: Array<Bool> = [];
 
 	#if hscriptPos
