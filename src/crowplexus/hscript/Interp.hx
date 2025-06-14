@@ -389,10 +389,11 @@ class Interp {
 		return exprReturn(expr);
 	}
 
-	function exprReturn(e, returnDef:Bool = true): Dynamic {
+	function exprReturn(e, returnDef: Bool = true): Dynamic {
 		try {
 			var dvalue = expr(e);
-			if(returnDef) return dvalue;
+			if (returnDef)
+				return dvalue;
 		} catch (e:Stop) {
 			switch (e) {
 				case SBreak:
