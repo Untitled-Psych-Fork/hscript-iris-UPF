@@ -297,10 +297,12 @@ class Iris {
 			#if hscriptPos
 			} catch (e:Error) {
 				Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: parser.line});
+				resumeError = true;
 				null;
 			#end
 			} catch (e) {
 				@:privateAccess Iris.error(Std.string(e), cast {fileName: this.name, lineNumber: 0});
+				resumeError = true;
 				null;
 			}
 		}

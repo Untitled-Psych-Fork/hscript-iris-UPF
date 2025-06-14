@@ -122,6 +122,7 @@ class Parser {
 	var abductCount: Int = 0;
 	var abducts = ["function", "if", "for", "while", "try", "switch", "do"];
 	var sureStaticModifier: Bool = false;
+	var interpolationState:Bool = false;
 	var compatibles: Array<Bool> = [];
 
 	#if hscriptPos
@@ -505,7 +506,7 @@ class Parser {
 					case TConst(c):
 						if (allowJSON) {
 							switch (c) {
-								case CString(_):
+								case CString(_, _):
 									var tk2 = token();
 									push(tk2);
 									push(tk);
@@ -1688,6 +1689,29 @@ class Parser {
 					case 36:
 						b.addChar(c);
 						pos++;
+					case char if(char == 123):
+						var a = [];
+						while (true) {
+							var t = token();
+							if (t == TBrClose)
+								break;
+							push(t);
+							abductCount++;
+							var e = parseExpr();
+							if (!expr(e).match(EIgnore(_)))
+								a.push(e);
+
+							var tk = token();
+
+							if (tk != TSemicolon && tk != TEof) {
+								if (isBlock(e) || a.length < 2)
+									push(tk);
+								else
+									unexpected(tk);
+							}
+							abductCount--;
+						}
+						es.push({e: mk(EBlock(a)), pos: pos});
 					case char if(idents[char]):
 						var cnst = "";
 						while(idents[c] == true) {
