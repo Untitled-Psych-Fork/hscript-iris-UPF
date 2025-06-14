@@ -27,7 +27,7 @@ import crowplexus.hscript.Types.ByteUInt;
 enum Const {
 	CInt(v: Int);
 	CFloat(f: Float);
-	CString(s: String);
+	CString(s: String, ?sm: Array<{var e:Expr; var pos:Int;}>);
 	#if !haxe3
 	CInt32(v:haxe.Int32);
 	#end

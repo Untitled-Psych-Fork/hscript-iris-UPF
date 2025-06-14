@@ -97,6 +97,11 @@ class Parser {
 	public var allowMetadata: Bool;
 
 	/**
+	 * 是否允许单引号进行$插值
+	 */
+	public var allowInterpolation: Bool;
+
+	/**
 		resume from parsing errors (when parsing incomplete code, during completion for example)
 	**/
 	public var resumeErrors: Bool;
@@ -1659,11 +1664,14 @@ class Parser {
 	}
 
 	function readString(until) {
+		var pos:Int = 0;
 		var c = 0;
 		var b = new StringBuf();
 		var esc = false;
+		var im = false;
 		var old = line;
 		var s = input;
+		var es = [];
 		#if hscriptPos
 		var p1 = readPos - 1;
 		#end
@@ -1674,20 +1682,51 @@ class Parser {
 				error(EUnterminatedString, p1, p1);
 				break;
 			}
+			if(im) {
+				im = false;
+				switch(c) {
+					case 36:
+						b.addChar(c);
+						pos++;
+					case char if(idents[char]):
+						var cnst = "";
+						while(idents[c] == true) {
+							cnst += String.fromCharCode(c);
+							c = readChar();
+						}
+						var oldPos = readPos;
+						es.push({e: mk(EIdent(cnst)), pos: pos});
+						//trace(es[es.length - 1]);
+						readPos--;
+					case _:
+						b.addChar(36);
+						pos++;
+						b.addChar(c);
+						pos++;
+				}
+				continue;
+			}
+
 			if (esc) {
 				esc = false;
 				switch (c) {
 					case 'n'.code:
 						b.addChar('\n'.code);
+						pos++;
 					case 'r'.code:
 						b.addChar('\r'.code);
+						pos++;
 					case 't'.code:
 						b.addChar('\t'.code);
+						pos++;
 					case "'".code, '"'.code, '\\'.code:
 						b.addChar(c);
+						pos++;
 					case '/'.code:
-						if (allowJSON)
-							b.addChar(c)
+						if (allowJSON) {
+							b.addChar(c);
+							pos++;
+						}
 						else
 							invalidChar(c);
 					case "u".code:
@@ -1713,6 +1752,7 @@ class Parser {
 							}
 						}
 						b.addChar(k);
+						pos++;
 					default:
 						invalidChar(c);
 				}
@@ -1720,13 +1760,16 @@ class Parser {
 				esc = true;
 			else if (c == until)
 				break;
-			else {
+			else if(allowInterpolation && c == 36 && until == 39) {
+				im = true;
+			} else {
 				if (c == 10)
 					line++;
 				b.addChar(c);
+				pos++;
 			}
 		}
-		return b.toString();
+		return CString(b.toString(), es);
 	}
 
 	function token() {
@@ -1962,7 +2005,7 @@ class Parser {
 				case "]".code:
 					return TBkClose;
 				case "'".code, '"'.code:
-					return TConst(CString(readString(char)));
+					return TConst(readString(char));
 				case "?".code:
 					char = readChar();
 					if (char == ".".code)

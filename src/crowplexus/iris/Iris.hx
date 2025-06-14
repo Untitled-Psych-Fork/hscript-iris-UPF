@@ -272,9 +272,8 @@ class Iris {
 		Iris.instances.set(this.name, this);
 		this.config.packageName = parser.packageName;
 		return try {
-			if (expr != null)
-				interp.execute(expr);
-			null;
+			if (expr != null) interp.execute(expr);
+			else null;
 		#if hscriptPos
 		} catch (e:Error) {
 			Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: e.line});

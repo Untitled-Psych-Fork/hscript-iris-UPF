@@ -511,6 +511,10 @@ class Interp {
 		return null;
 	}
 
+	inline static function stringInsert(s:String, pos:Int, sm:String) {
+		return s.substr(0, pos) + sm + s.substr(pos);
+	}
+
 	public function getOrImportClass(name: String): Dynamic {
 		if (Iris.proxyImports.exists(name))
 			return Iris.proxyImports.get(name);
@@ -528,7 +532,18 @@ class Interp {
 				return switch (c) {
 					case CInt(v): v;
 					case CFloat(f): f;
-					case CString(s): s;
+					case CString(s, sm):
+						if(sm != null && sm.length > 0) {
+							var inPos = 0;
+							for(m in sm) {
+								if(m != null) {
+									var ret = Std.string(exprReturn(m.e));
+									s = stringInsert(s, m.pos + inPos , ret);
+									inPos += ret.length;
+								}
+							}
+						}
+						s;
 					#if !haxe3
 					case CInt32(v): v;
 					#end
