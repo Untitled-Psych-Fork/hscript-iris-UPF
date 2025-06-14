@@ -297,7 +297,6 @@ class Iris {
 			#if hscriptPos
 			} catch (e:Error) {
 				Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: parser.line});
-				resumeError = true;
 				null;
 			#end
 			} catch (e) {
