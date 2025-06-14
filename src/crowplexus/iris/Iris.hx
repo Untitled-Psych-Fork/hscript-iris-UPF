@@ -4,6 +4,7 @@ import crowplexus.iris.utils.Ansi;
 import crowplexus.hscript.proxy.ProxyType;
 import haxe.ds.StringMap;
 import crowplexus.hscript.*;
+import crowplexus.hscript.Expr;
 import crowplexus.iris.ErrorSeverity;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.utils.UsingEntry;
@@ -270,28 +271,50 @@ class Iris {
 
 		Iris.instances.set(this.name, this);
 		this.config.packageName = parser.packageName;
-		return interp.execute(expr);
+		return try {
+			if (expr != null)
+				interp.execute(expr);
+			null;
+		#if hscriptPos
+		} catch (e:Error) {
+			Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: e.line});
+			null;
+		#end
+		} catch (e) {
+			Iris.error(Std.string(e), cast interp.posInfos());
+			null;
+		}
 	}
 
 	/**
-	 * If you want to override the script, you should do parse(true);
-	 *
-	 * just parse(); otherwise, forcing may fix some behaviour depending on your implementation.
-	**/
+		 * If you want to override the script, you should do parse(true);
+		 *
+		 * just parse(); otherwise, forcing may fix some behaviour depending on your implementation.
+		**/
 	public function parse(force: Bool = false) {
 		if (force || expr == null) {
-			expr = parser.parseString(scriptCode, this.name);
+			expr = try {
+				parser.parseString(scriptCode, this.name);
+			#if hscriptPos
+			} catch (e:Error) {
+				Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: parser.line});
+				null;
+			#end
+			} catch (e) {
+				@:privateAccess Iris.error(Std.string(e), cast {fileName: this.name, lineNumber: 0});
+				null;
+			}
 		}
 		return expr;
 	}
 
 	/**
-	 * Appends Default Classes/Enums for the Script to use.
-	**/
+			 * Appends Default Classes/Enums for the Script to use.
+			**/
 	public function preset(): Void {
-		set("Std", Std); // TODO: add a proxy for std
-		set("StringTools", StringTools);
-		set("Math", Math);
+		/*set("Std", Std);
+					set("StringTools", StringTools);
+					set("Math", Math); */
 		#if hscriptPos
 		// overriding trace for good measure.
 		// if you're a game developer or a fnf modder (hi guys),
@@ -307,23 +330,30 @@ class Iris {
 	}
 
 	/**
-	 * Returns a field from the script.
-	 * @param field 	The field that needs to be looked for.
-	 */
+			 * Returns a field from the script.
+			 * @param field 	The field that needs to be looked for.
+			 */
 	public function get(field: String): Dynamic {
 		#if IRIS_DEBUG
 		if (interp == null)
 			Iris.fatal("[Iris:get()]: " + interpErrStr + ", when trying to get variable \"" + field + "\", returning false...");
 		#end
-		return interp != null ? interp.variables.get(field) : false;
+		if (interp != null) {
+			if (interp.directorFields.exists(field))
+				return interp.directorFields.get(field);
+			else if (interp.directorFields.exists(field + ";const"))
+				return interp.directorFields.get(field + ";const");
+			return interp.variables.get(field);
+		}
+		return null;
 	}
 
 	/**
-	 * Sets a new field to the script
-	 * @param name          The name of your new field, scripts will be able to use the field with the name given.
-	 * @param value         The value for your new field.
-	 * @param allowOverride If set to true, when setting the new field, we will ignore any previously set fields of the same name.
-	 */
+			 * Sets a new field to the script
+			 * @param name          The name of your new field, scripts will be able to use the field with the name given.
+			 * @param value         The value for your new field.
+			 * @param allowOverride If set to true, when setting the new field, we will ignore any previously set fields of the same name.
+			 */
 	public function set(name: String, value: Dynamic, allowOverride: Bool = true): Void {
 		if (interp == null || interp.variables == null) {
 			#if IRIS_DEBUG
@@ -332,15 +362,17 @@ class Iris {
 			return;
 		}
 
-		if (allowOverride || !interp.variables.exists(name))
+		if (interp.imports != null && (value is Class || value is Enum))
+			interp.imports.set(name, value);
+		else if (allowOverride || !interp.variables.exists(name))
 			interp.variables.set(name, value);
 	}
 
 	/**
-	 * Calls a method on the script
-	 * @param fun       The name of the method you wanna call.
-	 * @param args      The arguments that the method needs.
-	 */
+			 * Calls a method on the script
+			 * @param fun       The name of the method you wanna call.
+			 * @param args      The arguments that the method needs.
+			 */
 	public function call(fun: String, ?args: Array<Dynamic>): IrisCall {
 		if (interp == null) {
 			#if IRIS_DEBUG
@@ -370,7 +402,7 @@ class Iris {
 			Iris.error(Printer.errorToString(e, false), this.interp.posInfos());
 		}
 		#end
-		catch (e:haxe.Exception) {
+		catch(e) {
 			var pos = isFunction ? this.interp.posInfos() : Iris.getDefaultPos(this.name);
 			Iris.error(Std.string(e), pos);
 		}
@@ -379,9 +411,9 @@ class Iris {
 	}
 
 	/**
-	 * Checks the existance of a field or method within your script.
-	 * @param field 		The field to check if exists.
-	 */
+			 * Checks the existance of a field or method within your script.
+			 * @param field 		The field to check if exists.
+			 */
 	public function exists(field: String): Bool {
 		#if IRIS_DEBUG
 		if (interp == null)
@@ -391,11 +423,11 @@ class Iris {
 	}
 
 	/**
-	 * Destroys the current instance of this script
-	 * along with its parser, and also removes it from the `Iris.instances` map.
-	 *
-	 * **WARNING**: this action CANNOT be undone.
-	**/
+			 * Destroys the current instance of this script
+			 * along with its parser, and also removes it from the `Iris.instances` map.
+			 *
+			 * **WARNING**: this action CANNOT be undone.
+			**/
 	public function destroy(): Void {
 		if (Iris.instances.exists(this.name))
 			Iris.instances.remove(this.name);
@@ -404,10 +436,10 @@ class Iris {
 	}
 
 	/**
-	 * Destroys every single script found within the `Iris.instances` map.
-	 *
-	 * **WARNING**: this action CANNOT be undone.
-	**/
+			 * Destroys every single script found within the `Iris.instances` map.
+			 *
+			 * **WARNING**: this action CANNOT be undone.
+			**/
 	public static function destroyAll(): Void {
 		for (key in Iris.instances.keys()) {
 			var iris = Iris.instances.get(key);
