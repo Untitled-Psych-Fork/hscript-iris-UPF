@@ -1,8 +1,8 @@
-# HScript Iris
+# HScript Iris Improved
 
 ---
 
-a [HScript](https://github.com/HaxeFoundation/hscript) extension made to make the process of creating a script way easier.
+a fork of [HScript-Iris](https://github.com/pisayesiwsi/hscript-iris) what work on creating more interesting features. Perhaps this will be of some use to you. (Although there are many bugs)
 
 ---
 

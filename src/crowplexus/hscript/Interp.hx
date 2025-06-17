@@ -63,7 +63,6 @@ class Interp {
 	public var imports: Map<String, Dynamic>;
 
 	var locals: Map<String, LocalVar>;
-	var props: Map<String, Dynamic>;
 	var binops: Map<String, Expr->Expr->Dynamic>;
 	var propertyLinks: Map<String, PropertyAccessor>;
 	#else
@@ -72,7 +71,6 @@ class Interp {
 	public var imports: Hash<Dynamic>;
 
 	var locals: Hash<LocalVar>;
-	var props: Hash<Dynamic>;
 	var binops: Hash<Expr->Expr->Dynamic>;
 	var propertyLinks: Hash<PropertyAccessor>;
 	#end
@@ -129,13 +127,11 @@ class Interp {
 		propertyLinks = new Map();
 		variables = new Map<String, Dynamic>();
 		directorFields = new Map<String, Dynamic>();
-		props = new Map<String, Dynamic>();
 		imports = new Map<String, Dynamic>();
 		#else
 		propertyLinks = new Hash();
 		variables = new Hash();
 		directorFields = new Hash();
-		props = new Hash();
 		imports = new Hash();
 		#end
 
@@ -582,16 +578,16 @@ class Interp {
 					}
 				} else {
 					if (!isConst && de == 0 && (getter != "default" || setter != "default")) {
-						props.set(n, v);
+						directorFields.set(n, v);
 						propertyLinks.set(n, new PropertyAccessor(this, () -> {
-							if (props.exists(n))
-								return props.get(n);
+							if (directorFields.exists(n))
+								return directorFields.get(n);
 							else
 								throw error(EUnknownVariable(n));
 							return null;
 						}, (val) -> {
-							if (props.exists(n))
-								props.set(n, val);
+							if (directorFields.exists(n))
+								directorFields.set(n, val);
 							else
 								throw error(EUnknownVariable(n));
 							return val;

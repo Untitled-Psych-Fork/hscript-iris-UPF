@@ -9,10 +9,10 @@ haxelib install hscript-iris
 For unstable versions however, use this
 
 ```
-haxelib git hscript-iris https://github.com/crowplexus/hscript-iris/
+haxelib git hscript-iris-improved https://github.com/NovaFlare-Engine-Concentration/hscript-iris-improved
 ```
 
-Once this is done, go to your Project File, whether that be a build.hxml for Haxe Projects, or Project.xml for OpenFL and Flixel projects, and add `hscript-iris` to your libraries
+Once this is done, go to your Project File, whether that be a build.hxml for Haxe Projects, or Project.xml for OpenFL and Flixel projects, and add `hscript-iris-improved` to your libraries
 
 ---
 
@@ -20,7 +20,7 @@ Once this is done, go to your Project File, whether that be a build.hxml for Hax
 
 ### Haxe Project Example
 ```hxml
---library hscript-iris
+--library hscript-iris-improved
 # this is optional and can be added if wanted
 # provides descriptive traces and better error handling at runtime
 -D hscriptPos
@@ -29,6 +29,6 @@ Once this is done, go to your Project File, whether that be a build.hxml for Hax
 ### OpenFL / Flixel Project Example
 
 ```xml
-<haxelib name="hscript-iris"/>
+<haxelib name="hscript-iris-improved"/>
 <haxedef name="hscriptPos"/>
 ```

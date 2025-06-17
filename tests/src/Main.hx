@@ -27,7 +27,7 @@ class Main {
 	static function mainProp() {
 		var sm1: Iris = new Iris(Resource.getString("assets/props_test.hx"));
 		sm1.call("new");
-		@:privateAccess trace('Script_Props_State: ${sm1.interp.props}, Script_Props_Links: ${sm1.interp.propertyLinks}');
+		@:privateAccess trace('Script_Props_State: ${sm1.interp.directorFields}, Script_Props_Links: ${sm1.interp.propertyLinks}');
 	}
 
 	static function mainStatic() {

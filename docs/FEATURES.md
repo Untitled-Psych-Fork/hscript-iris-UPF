@@ -22,13 +22,20 @@
 
 - [x] Packages (Added in 1.1.1)
 
+- [x] Regex
+
+- [x] Parent (Used in `Interp.parentInstance`)
+
+- [x] Getter & Setter (@see [Props-Testing](../tests/assets/props_test.hx))
+
+- [x] staticModifier (@see [Static-Testing1](../tests/assets/static_test1.hx) & [Static-Testing](../tests/assets/static_test2.hx))
+
+- [x] String Interpolation (It Still has some trouble. If you need to use it. Please Used in `Parser.allowInterpolation`)
+
 ---
 
 ## TODO:
 
 - [ ] Classes?
-- [ ] Regex?
-- [ ] Sandboxing
-- [ ] Parenting (`this` variable would be set for scripts, which allows being able to access variables from a set class without having to type it out, i.e: PlayState.instance)
 
 ---
