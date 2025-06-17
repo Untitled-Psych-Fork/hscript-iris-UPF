@@ -893,6 +893,8 @@ class Interp {
 				return expr(e);
 			case ECheckType(e, _):
 				return expr(e);
+			case EClass(clName, exName, imName, fields):
+				return e;
 			case EEnum(enumName, fields):
 				var obj = {};
 				for (index => field in fields) {

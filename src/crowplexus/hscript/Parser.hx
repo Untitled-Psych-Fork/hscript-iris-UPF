@@ -348,7 +348,7 @@ class Parser {
 		if (e == null)
 			return false;
 		return switch (expr(e)) {
-			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _): true;
+			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _), EClass(_, _, _, _): true;
 			case EFunction(_, e, _, _, _): isBlock(e);
 			case EVar(_, _, t, e, _): e != null ? isBlock(e) : t != null ? t.match(CTAnon(_)) : false;
 			case EIf(_, e1, e2): if (e2 != null) isBlock(e2) else isBlock(e1);
@@ -1021,7 +1021,7 @@ class Parser {
 				if(abductCount > 0) unexpected(TId(id));
 
 				var className:String = '';
-				var extendedClassName:String = '';
+				var extendedClassName:Null<String> = null;
 				var interfacesNames:Array<String> = [];
 				var t = token();
 
@@ -1061,21 +1061,17 @@ class Parser {
 				}
 
 				push(t);
-				if(maybe(TBrOpen)) {
-					while(true) {
-						t = token();
-						if(t == TBrClose) {
-							break;
-						}
-						push(t);
-						parseClassField();
+				var fields = [];
+				ensure(TBrOpen);
+				while(true) {
+					t = token();
+					if(t == TBrClose) {
+						break;
 					}
-				} else {
-					parseClassField();
+					push(t);
+					fields.push(parseClassField());
 				}
-				//trace('className: $className, extended: $extendedClassName, interfaces: $interfacesNames');
-
-				mk(EIgnore(true));
+				mk(EClass(className, extendedClassName, interfacesNames, fields));
 			case "enum":
 				if(abductCount > 0) unexpected(TId(id));
 				var name = getIdent();
@@ -1194,21 +1190,26 @@ class Parser {
 		}
 	}
 
-	private var modifiers:Array<String> = ["public", "static", "private", "inline"];
-	function parseClassField(?injector:Array<String>) {
+	private var modifiers:Array<String> = ["public", "static", "override", "private", "inline"];
+	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):FieldDecl {
 		var t = token();
 		return switch(t) {
+			case TMeta(name):
+				if(injector != null && injector.length > 0) unexpected(t);
+				if(injectorMeta == null) injectorMeta = [];
+				injectorMeta.push({name: name, params: parseMetaArgs()});
+				parseClassField(injector, injectorMeta);
 			case TId(id) if(modifiers.contains(id)):
 				if(injector != null) {
-					if(injector.contains(id) || (id == "public" && injector.contains("private")) || (id == "private" && injector.contains("public"))) {
+					if(injector.contains(id) || (id == "public" && injector.contains("private")) || (id == "private" && injector.contains("public") || (id == "override" && injector.contains("static")) || (id == "static" && injector.contains("override")))) {
 						unexpected(t);
 					}
 					injector.push(id);
-					parseClassField(injector);
+					parseClassField(injector, injectorMeta);
 				} else {
 					var another = new Array<String>();
 					another.push(id);
-					parseClassField(another);
+					parseClassField(another, injectorMeta);
 				}
 			case TId(id) if(id == "var" || id == "final"):
 				var getter: String = "default";
@@ -1263,8 +1264,10 @@ class Parser {
 					} else
 						unexpected(tk);
 				}
+				var ctype = null;
 				if (tk == TDoubleDot && allowTypes) {
 					t = parseType();
+					ctype = t;
 					tk = token();
 				}
 				var e = null;
@@ -1274,9 +1277,29 @@ class Parser {
 					push(tk);
 				ensure(TSemicolon);
 
-				//trace(injector + "; " + "variable: " + ident + "; " + "value: " + e);
-
-				null;
+				return {
+					name: ident,
+					meta: injectorMeta,
+					kind: KVar({
+						get: getter,
+						set: setter,
+						expr: e,
+						type: ctype,
+					}),
+					access: {
+						final real:Array<FieldAccess> = [];
+						if(injector != null) for(ac in injector)
+							switch(ac) {
+								case "public": real.push(APublic);
+								case "private": real.push(APrivate);
+								case "inline": real.push(AInline);
+								case "static": real.push(AStatic);
+								case "override": real.push(AOverride);
+								case _:
+							}
+						real;
+					}
+				};
 			case TId(id) if(id == "function"):
 				var name = getIdent();
 				//trace(injector + "; " + "function: " + name);
@@ -1290,8 +1313,30 @@ class Parser {
 					else
 						ret = parseType();
 				}
-				parseFullExpr([]);
-				null;
+				var es = [];
+				parseFullExpr(es);
+				return {
+					name: name,
+					meta: injectorMeta,
+					kind: KFunction({
+						args: args,
+						expr: es[0],
+						ret: ret
+					}),
+					access: {
+						final real:Array<FieldAccess> = [];
+						if(injector != null) for(ac in injector)
+							switch(ac) {
+								case "public": real.push(APublic);
+								case "private": real.push(APrivate);
+								case "inline": real.push(AInline);
+								case "static": real.push(AStatic);
+								case "override": real.push(AOverride);
+								case _:
+							}
+						real;
+					}
+				};
 			default:
 				unexpected(t);
 		}

@@ -90,6 +90,7 @@ enum Expr
 	EDoWhile(cond:Expr, e:Expr);
 	EMeta(name:String, args:Array<Expr>, e:Expr);
 	ECheckType(e:Expr, t:CType);
+	EClass(className:String, exn:Null<String>, imn:Array<String>, fields:Array<FieldDecl>);
 	EEnum(name:String, fields:Array<EnumType>);
 	EDirectValue(value:Dynamic);
 	EUsing(name:String);

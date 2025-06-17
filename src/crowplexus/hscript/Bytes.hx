@@ -510,6 +510,8 @@ class Bytes {
 			case ECheckType(e, _):
 				doEncodeExprType(ECheckType);
 				doEncode(e);
+			case EClass(_, _, _, _):
+				//学？学个屁！
 			case EEnum(name, fields):
 				doEncodeExprType(EEnum);
 				doEncodeString(name);
