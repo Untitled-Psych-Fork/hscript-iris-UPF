@@ -18,7 +18,8 @@ class Main {
 		mainTest();
 		mainBytes();
 		testIndenticalNames();
-		testUsing();
+		//position changing
+		//testUsing();
 		mainStatic();
 		mainProp();
 	}

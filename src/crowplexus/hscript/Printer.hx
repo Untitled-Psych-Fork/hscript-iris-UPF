@@ -168,6 +168,25 @@ class Printer {
 		}
 		switch (Tools.expr(e)) {
 			case EIgnore(_):
+			case EClass(a, b, c, d):
+				add("class ");
+				add(a);
+				if(b != null) {
+					add(" extends ");
+					add(b);
+				}
+				if(c != null) for(i=>sb in c) {
+					if(i > 0) add(" ");
+					add("implements ");
+					add(sb);
+				}
+				add(" {");
+				if(d != null && d.length > 0) {
+					add("/*");
+					add("(Sorry. Can't print fields in short)");
+					add("*/");
+				}
+				add("}");
 			case EConst(c):
 				switch (c) {
 					case CInt(i): add(i);
@@ -262,7 +281,9 @@ class Printer {
 				for (e in el) {
 					add(tabs);
 					expr(e);
-					add(";\n");
+					var re = #if hscriptPos e.e #else e #end;
+					if(re.match(EClass(_, _, _, _)) || re.match(EEnum(_, _))) add("\n");
+					else add(";\n");
 				}
 				decrementIndent();
 				add(tabs);

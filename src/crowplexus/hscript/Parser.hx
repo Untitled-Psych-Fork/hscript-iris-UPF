@@ -349,7 +349,7 @@ class Parser {
 		if (e == null)
 			return false;
 		return switch (expr(e)) {
-			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _): true;
+			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _), EClass(_, _, _, _): true;
 			case EFunction(_, e, _, _, _): isBlock(e);
 			case EVar(_, _, t, e, _): e != null ? isBlock(e) : t != null ? t.match(CTAnon(_)) : false;
 			case EIf(_, e1, e2): if (e2 != null) isBlock(e2) else isBlock(e1);
@@ -871,6 +871,8 @@ class Parser {
 				}
 				mk(ESwitch(parentExpr, cases, def), p1, tokenMax);
 			case "import":
+				//no need settup in local.
+				if(abductCount > 0) unexpected(TId(id));
 				var path = [getIdent()];
 				var asStr: String = null;
 				var star: Bool = false;
@@ -907,8 +909,63 @@ class Parser {
 					}
 				 */
 				mk(EImport(path.join('.'), asStr));
+			case "class":
+				if(abductCount > 0) unexpected(TId(id));
 
+				var className:String = '';
+				var extendedClassName:Null<String> = null;
+				var interfacesNames:Array<String> = [];
+				var t = token();
+
+				switch(t) {
+					case TId(id):
+						if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) className = id;
+						else error(ECustom('Class Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
+					case _:
+						unexpected(t);
+				}
+
+				if(maybe(TId("extends"))) {
+					t = token();
+					switch(t) {
+						case TId(id):
+							if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) extendedClassName = id;
+							else error(ECustom('Extended Class Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
+						case _:
+							unexpected(t);
+					}
+				}
+
+				t = token();
+				while(Type.enumEq(t, TId("implements"))) {
+					var tk = token();
+					switch(tk) {
+						case TId(id):
+							if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) {
+								if(!interfacesNames.contains(id))
+									interfacesNames.push(id);
+								else error(ECustom('Cannot reuse an interface "' + id + '"'), tokenMin, tokenMax);
+							} else error(ECustom('Interface Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
+						case _:
+							unexpected(tk);
+					}
+					t = token();
+				}
+
+				push(t);
+				var fields = [];
+				ensure(TBrOpen);
+				while(true) {
+					t = token();
+					if(t == TBrClose) {
+						break;
+					}
+					push(t);
+					fields.push(parseClassField());
+				}
+				mk(EClass(className, extendedClassName, interfacesNames, fields));
 			case "enum":
+				if(abductCount > 0) unexpected(TId(id));
 				var name = getIdent();
 
 				ensure(TBrOpen);
@@ -952,6 +1009,7 @@ class Parser {
 
 				mk(EEnum(name, fields));
 			case "typedef":
+				if(abductCount > 0) unexpected(TId(id));
 				// typedef Name = Type;
 
 				/*
@@ -1003,9 +1061,11 @@ class Parser {
 				}
 
 			case "using":
+				if(abductCount > 0) unexpected(TId(id));
 				var path = parsePath();
 				mk(EUsing(path.join(".")));
 			case "package":
+				if(abductCount > 0) unexpected(TId(id));
 				// ignore package
 				var tk = token();
 				push(tk);
@@ -1022,30 +1082,30 @@ class Parser {
 		}
 	}
 
-	var modifierContainer:Array<String> = ["private", "public", "inline", "static"];
-	private function injectorModifier(?injectors:Array<String>) {
+  
+
+	private var modifiers:Array<String> = ["public", "static", "override", "private", "inline"];
+	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):FieldDecl {
 		var t = token();
 		return switch(t) {
-			case TId(id) if(modifierContainer.contains(id)):
-				if(injectors == null) injectors = [];
-				injectors.push(id);
-				while(true) {
-					var tk = token();
-					switch(tk) {
-						case TId(id) if(modifierContainer.contains(id)):
-							if(!injectors.contains(id) &&
-								!(injectors.contains("public") && id == "private") &&
-								!(injectors.contains("private") && id == "public")
-							) injectors.push(id);
-							else unexpected(tk);
-						case _:
-							push(tk);
-							break;
+			case TMeta(name):
+				if(injector != null && injector.length > 0) unexpected(t);
+				if(injectorMeta == null) injectorMeta = [];
+				injectorMeta.push({name: name, params: parseMetaArgs()});
+				parseClassField(injector, injectorMeta);
+			case TId(id) if(modifiers.contains(id)):
+				if(injector != null) {
+					if(injector.contains(id) || (id == "public" && injector.contains("private")) || (id == "private" && injector.contains("public") || (id == "override" && injector.contains("static")) || (id == "static" && injector.contains("override")))) {
+						unexpected(t);
 					}
+					injector.push(id);
+					parseClassField(injector, injectorMeta);
+				} else {
+					var another = new Array<String>();
+					another.push(id);
+					parseClassField(another, injectorMeta);
 				}
-				injectorModifier(injectors);
-			case TId(id) if(id == "final" || id == "var"):
-				if(injectors != null && injectors.contains("inline")) error(ECustom("Cannot Use \"inline\" Modifier For claiming \"final\", \"var\" In Short."), tokenMin, tokenMax);
+			case TId(id) if(id == "var" || id == "final"):
 				var getter: String = "default";
 				var setter: String = "default";
 				var ident = getIdent();
@@ -1055,7 +1115,7 @@ class Parser {
 				trace("变量名：" + ident + "，" + "层次：" + abductCount);
 				#end
 				if (tk == TPOpen) {
-					if (abductCount == 0 && id == "var") {
+					if (id == "var") {
 						var getter1: Null<String> = null;
 						var setter1: Null<String> = null;
 						var displayComma: Bool = false;
@@ -1098,49 +1158,80 @@ class Parser {
 					} else
 						unexpected(tk);
 				}
+				var ctype = null;
 				if (tk == TDoubleDot && allowTypes) {
 					t = parseType();
+					ctype = t;
 					tk = token();
-				}
-
-				var ttime = compatibles.length;
-				if (abducts.contains(id)) {
-					compatibles.push(true);
-					abductCount++;
 				}
 				var e = null;
 				if (Type.enumEq(tk, TOp("=")))
 					e = parseExpr();
 				else
 					push(tk);
-				if (abducts.contains(id)) {
-					while (compatibles.length > ttime)
-						compatibles.pop();
-					abductCount--;
-				}
-				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if(abductCount == 0 && injectors != null) injectors else null), tokenMin,
-					(e == null) ? tokenMax : pmax(e));
-			case TId(id) if(id == "function"):
-				var tk = token();
-				var name = null;
-				switch (tk) {
-					case TId(id): name = id;
-					default: push(tk);
-				}
-				var ttime = compatibles.length;
-				if (abducts.contains(id)) {
-					compatibles.push(true);
-					abductCount++;
-				}
-				var inf = parseFunctionDecl();
-				if (abducts.contains(id)) {
-					while (compatibles.length > ttime)
-						compatibles.pop();
-					abductCount--;
-				}
+				ensure(TSemicolon);
 
-				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if(abductCount == 0 && injectors != null) injectors else null), tokenMin, pmax(inf.body));
-			case _:
+				return {
+					name: ident,
+					meta: injectorMeta,
+					kind: KVar({
+						get: getter,
+						set: setter,
+						expr: e,
+						type: ctype,
+					}),
+					access: {
+						final real:Array<FieldAccess> = [];
+						if(injector != null) for(ac in injector)
+							switch(ac) {
+								case "public": real.push(APublic);
+								case "private": real.push(APrivate);
+								case "inline": real.push(AInline);
+								case "static": real.push(AStatic);
+								case "override": real.push(AOverride);
+								case _:
+							}
+						real;
+					}
+				};
+			case TId(id) if(id == "function"):
+				var name = getIdent();
+				//trace(injector + "; " + "function: " + name);
+				ensure(TPOpen);
+				var args = parseFunctionArgs();
+				var ret = null;
+				if (allowTypes) {
+					var tk = token();
+					if (tk != TDoubleDot)
+						push(tk);
+					else
+						ret = parseType();
+				}
+				var es = [];
+				parseFullExpr(es);
+				return {
+					name: name,
+					meta: injectorMeta,
+					kind: KFunction({
+						args: args,
+						expr: es[0],
+						ret: ret
+					}),
+					access: {
+						final real:Array<FieldAccess> = [];
+						if(injector != null) for(ac in injector)
+							switch(ac) {
+								case "public": real.push(APublic);
+								case "private": real.push(APrivate);
+								case "inline": real.push(AInline);
+								case "static": real.push(AStatic);
+								case "override": real.push(AOverride);
+								case _:
+							}
+						real;
+					}
+				};
+			default:
 				unexpected(t);
 		}
 	}
@@ -1696,6 +1787,7 @@ class Parser {
 				error(EUnterminatedString, p1, p1);
 				break;
 			}
+			#if haxe4
 			if(im) {
 				im = false;
 				switch(c) {
@@ -1743,6 +1835,7 @@ class Parser {
 				}
 				continue;
 			}
+			#end
 
 			if (esc) {
 				esc = false;
