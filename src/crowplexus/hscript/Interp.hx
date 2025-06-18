@@ -54,11 +54,15 @@ class Interp {
 	/**
 	 * 还是觉得直接包装成静态更好一点（不模仿）
 	 */
-	public static var staticVariables: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+	static var staticVariables: #if haxe3 Map<String, {var value:Dynamic; var type:String; var const:Bool;}> = new Map() #else Hash<{var value:Dynamic; var type:String; var const:Bool;}> = new Hash() #end;
+	public inline static function getStaticVariable(name:String):Dynamic {
+		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
+		return null;
+	}
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
-	public var directorFields: Map<String, Dynamic>;
+	public var directorFields: Map<String, {var value:Dynamic; var type:String; var const:Bool;}>;
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
 
@@ -66,7 +70,7 @@ class Interp {
 	var binops: Map<String, Expr->Expr->Dynamic>;
 	var propertyLinks: Map<String, PropertyAccessor>;
 	#else
-	public var directorFields: Hash<Dynamic>;
+	public var directorFields: Hash<{var value:Dynamic; var type:String; var const:Bool;}>;
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
 
@@ -126,7 +130,7 @@ class Interp {
 		#if haxe3
 		propertyLinks = new Map();
 		variables = new Map<String, Dynamic>();
-		directorFields = new Map<String, Dynamic>();
+		directorFields = new Map();
 		imports = new Map<String, Dynamic>();
 		#else
 		propertyLinks = new Hash();
@@ -211,7 +215,22 @@ class Interp {
 			return;
 		}
 
-		if (directorFields.exists(name)) {
+		if(directorFields.get(name) != null) {
+			var l = directorFields.get(name);
+			if(l.const || l.type == "func") {
+				warn(ECustom("Cannot reassign final & function, for constant expression -> " + name));
+			} else {
+				l.value = v;
+			}
+		} else if(staticVariables.get(name) != null) {
+			var l = staticVariables.get(name);
+			if(l.const || l.type == "func") {
+				warn(ECustom("Cannot reassign final & function, for constant expression -> " + name));
+			} else {
+				l.value = v;
+			}
+		}
+		/*if (directorFields.exists(name)) {
 			directorFields.set(name, v);
 		} else if (directorFields.exists('$name;const')) {
 			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
@@ -219,7 +238,8 @@ class Interp {
 			staticVariables.set(name, v);
 		} else if (staticVariables.exists('$name;const')) {
 			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-		} else if (parentInstance != null) {
+		} */
+		else if (parentInstance != null) {
 			if (_parentFields.contains(name) || _parentFields.contains('set_$name')) {
 				Reflect.setProperty(parentInstance, name, v);
 			}
@@ -453,11 +473,6 @@ class Interp {
 		if (l != null)
 			return l.r;
 
-		if (directorFields.exists(id))
-			return directorFields.get(id);
-		else if (directorFields.exists('$id;const'))
-			return directorFields.get('$id;const');
-
 		if (propertyLinks.get(id) != null) {
 			var l = propertyLinks.get(id);
 			if (l.inState)
@@ -466,10 +481,11 @@ class Interp {
 				return l.link_getFunc();
 		}
 
-		if (staticVariables.exists(id))
-			return staticVariables.get(id);
-		else if (staticVariables.exists('$id;const'))
-			return staticVariables.get('$id;const');
+		if (directorFields.get(id) != null)
+			return directorFields.get(id).value;
+
+		if (staticVariables.get(id) != null)
+			return staticVariables.get(id).value;
 
 		if (variables.exists(id)) {
 			var v = variables.get(id);
@@ -507,10 +523,6 @@ class Interp {
 		return null;
 	}
 
-	inline static function stringInsert(s:String, pos:Int, sm:String) {
-		return s.substr(0, pos) + sm + s.substr(pos);
-	}
-
 	public function getOrImportClass(name: String): Dynamic {
 		if (Iris.proxyImports.exists(name))
 			return Iris.proxyImports.get(name);
@@ -534,7 +546,7 @@ class Interp {
 							for(m in sm) {
 								if(m != null) {
 									var ret = Std.string(exprReturn(m.e));
-									s = stringInsert(s, m.pos + inPos , ret);
+									s = Printer.stringInsert(s, m.pos + inPos , ret);
 									inPos += ret.length;
 								}
 							}
@@ -546,29 +558,29 @@ class Interp {
 				}
 			case EIdent(id):
 				return resolve(id);
-			case EVar(n, de, _, v, getter, setter, isConst, s):
+			case EVar(n, de, _, v, getter, setter, isConst, ass):
 				if (getter == null)
 					getter = "default";
 				if (setter == null)
 					setter = "default";
 
 				var v = (v == null ? null : expr(v));
-				if (s == true) {
-					if (!staticVariables.exists(n) && !staticVariables.exists(n + ";const")) {
+				if (ass != null && ass.contains("static")) {
+					if (staticVariables.get(n) == null) {
 						if (isConst)
-							staticVariables.set(n + ";const", v);
+							staticVariables.set(n, {value: v, type: "var", const: isConst});
 						else {
-							staticVariables.set(n, v);
+							staticVariables.set(n, {value: v, type: "var", const: isConst});
 							if (getter != "default" || setter != "default") {
 								propertyLinks.set(n, new PropertyAccessor(this, () -> {
-									if (staticVariables.exists(n))
-										return staticVariables.get(n);
+									if (staticVariables.get(n) != null)
+										return staticVariables.get(n).value;
 									else
 										throw error(EUnknownVariable(n));
 									return null;
 								}, (val) -> {
-									if (staticVariables.exists(n))
-										staticVariables.set(n, val);
+									if (staticVariables.get(n) != null)
+										staticVariables.get(n).value = val;
 									else
 										throw error(EUnknownVariable(n));
 									return val;
@@ -578,23 +590,23 @@ class Interp {
 					}
 				} else {
 					if (!isConst && de == 0 && (getter != "default" || setter != "default")) {
-						directorFields.set(n, v);
+						directorFields.set(n, {value: v, const: isConst, type: "var"});
 						propertyLinks.set(n, new PropertyAccessor(this, () -> {
-							if (directorFields.exists(n))
-								return directorFields.get(n);
+							if (directorFields.get(n) != null)
+								return directorFields.get(n).value;
 							else
 								throw error(EUnknownVariable(n));
 							return null;
 						}, (val) -> {
-							if (directorFields.exists(n))
-								directorFields.set(n, val);
+							if (directorFields.get(n) != null)
+								directorFields.get(n).value = val;
 							else
 								throw error(EUnknownVariable(n));
 							return val;
 						}, getter, setter));
 					} else {
 						if (de == 0) {
-							directorFields.set((isConst ? '$n;const' : n), v);
+							directorFields.set(n, {value: v, const: isConst, type: "var"});
 						} else {
 							declared.push({n: n, old: locals.get(n)});
 							locals.set(n, {r: v, const: isConst});
@@ -699,7 +711,7 @@ class Interp {
 				}
 				return null; // yeah. -Crow
 
-			case EFunction(params, fexpr, _, name, _, s):
+			case EFunction(params, fexpr, _, name, _, ass):
 				var capturedLocals = duplicate(locals);
 				var me = this;
 				var hasOpt = false, minParams = 0;
@@ -761,11 +773,12 @@ class Interp {
 				if (name != null) {
 					if (depth == 0) {
 						// global function
-						if (s == true) {
-							if (!staticVariables.exists(name))
-								staticVariables.set(name, f);
-						} else
-							variables.set(name, f);
+						if (ass != null && ass.contains("static")) {
+							if (staticVariables.get(name) == null)
+								staticVariables.set(name, {value: f, type: "func", const: false});
+						} else {
+							directorFields.set(name, {value: f, type: "func", const: false});
+						}
 					} else {
 						// function-in-function is a local function
 						declared.push({n: name, old: locals.get(name)});
