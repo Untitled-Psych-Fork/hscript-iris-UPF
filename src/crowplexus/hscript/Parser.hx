@@ -1082,7 +1082,128 @@ class Parser {
 		}
 	}
 
-  
+	var modifierContainer:Array<String> = ["private", "public", "inline", "static"];
+	private function injectorModifier(?injectors:Array<String>) {
+		var t = token();
+		return switch(t) {
+			case TId(id) if(modifierContainer.contains(id)):
+				if(injectors == null) injectors = [];
+				injectors.push(id);
+				while(true) {
+					var tk = token();
+					switch(tk) {
+						case TId(id) if(modifierContainer.contains(id)):
+							if(!injectors.contains(id) &&
+								!(injectors.contains("public") && id == "private") &&
+								!(injectors.contains("private") && id == "public")
+							) injectors.push(id);
+							else unexpected(tk);
+						case _:
+							push(tk);
+							break;
+					}
+				}
+				injectorModifier(injectors);
+			case TId(id) if(id == "final" || id == "var"):
+				if(injectors != null && injectors.contains("inline")) error(ECustom("Cannot Use \"inline\" Modifier For claiming \"final\", \"var\" In Short."), tokenMin, tokenMax);
+				var getter: String = "default";
+				var setter: String = "default";
+				var ident = getIdent();
+				var tk = token();
+				var t = null;
+				#if IRIS_DEBUG
+				trace("变量名：" + ident + "，" + "层次：" + abductCount);
+				#end
+				if (tk == TPOpen) {
+					if (abductCount == 0 && id == "var") {
+						var getter1: Null<String> = null;
+						var setter1: Null<String> = null;
+						var displayComma: Bool = false;
+						var closed: Bool = false;
+						while (true) {
+							var t = token();
+							switch (t) {
+								case TComma:
+									if (getter != null && !displayComma) {
+										displayComma = true;
+									} else unexpected(t);
+								case TId(byd):
+									if (getter1 == null && !displayComma) {
+										if (byd == "get" || byd == "never" || byd == "default" || byd == "null") {
+											getter1 = byd;
+										} else
+											unexpected(t);
+									} else if (setter1 == null && displayComma) {
+										if (byd == "set" || byd == "never" || byd == "default" || byd == "null") {
+											setter1 = byd;
+										} else
+											unexpected(t);
+									} else unexpected(t);
+								case TPClose:
+									if (getter1 != null && setter1 != null) closed = true; else unexpected(t);
+								default:
+									unexpected(t);
+							}
+
+							if (closed)
+								break;
+						}
+
+						if (getter1 != null)
+							getter = getter1;
+						if (setter1 != null)
+							setter = setter1;
+
+						tk = token();
+					} else
+						unexpected(tk);
+				}
+				if (tk == TDoubleDot && allowTypes) {
+					t = parseType();
+					tk = token();
+				}
+
+				var ttime = compatibles.length;
+				if (abducts.contains(id)) {
+					compatibles.push(true);
+					abductCount++;
+				}
+				var e = null;
+				if (Type.enumEq(tk, TOp("=")))
+					e = parseExpr();
+				else
+					push(tk);
+				if (abducts.contains(id)) {
+					while (compatibles.length > ttime)
+						compatibles.pop();
+					abductCount--;
+				}
+				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if(abductCount == 0 && injectors != null) injectors else null), tokenMin,
+					(e == null) ? tokenMax : pmax(e));
+			case TId(id) if(id == "function"):
+				var tk = token();
+				var name = null;
+				switch (tk) {
+					case TId(id): name = id;
+					default: push(tk);
+				}
+				var ttime = compatibles.length;
+				if (abducts.contains(id)) {
+					compatibles.push(true);
+					abductCount++;
+				}
+				var inf = parseFunctionDecl();
+				if (abducts.contains(id)) {
+					while (compatibles.length > ttime)
+						compatibles.pop();
+					abductCount--;
+				}
+
+				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if(abductCount == 0 && injectors != null) injectors else null), tokenMin, pmax(inf.body));
+			case _:
+				unexpected(t);
+		}
+	}
 
 	private var modifiers:Array<String> = ["public", "static", "override", "private", "inline"];
 	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):FieldDecl {
