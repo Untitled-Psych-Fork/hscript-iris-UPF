@@ -172,28 +172,60 @@ class Printer {
 				switch (c) {
 					case CInt(i): add(i);
 					case CFloat(f): add(f);
-					case CString(s):
-						add('"');
-						add(s.split('"')
-							.join('\\"')
-							.split("\n")
-							.join("\\n")
-							.split("\r")
-							.join("\\r")
-							.split("\t")
-							.join("\\t"));
-						add('"');
+					case CString(s, csgo):
+						if(csgo != null && csgo.length > 0) {
+							add("'");
+							var inPos = 0;
+							for(sm in csgo) {
+								if(sm != null && sm.e != null) {
+									final old = buf.length;
+									expr(sm.e);
+
+									if(buf.length > old) @:privateAccess {
+										var interporation = "${" + buf.toString().substr(old) + "}";
+										s = Printer.stringInsert(s, sm.pos + inPos , interporation);
+										inPos += interporation.length;
+										#if cpp
+										while(buf.length > old) buf.b.pop();
+										#else
+										buf.b = buf.b.substr(0, buf.length - old);
+										#end
+									}
+								}
+							}
+							add(s.split("'")
+								.join("\\'")
+								.split("\n")
+								.join("\\n")
+								.split("\r")
+								.join("\\r")
+								.split("\t")
+								.join("\\t"));
+							add("'");
+						} else {
+							add('"');
+							add(s.split('"')
+								.join('\\"')
+								.split("\n")
+								.join("\\n")
+								.split("\r")
+								.join("\\r")
+								.split("\t")
+								.join("\\t"));
+							add('"');
+						}
 				}
 			case EIdent(v):
 				add(v);
-			case EVar(n, _, t, e, gt, st, c, s):
+			case EVar(n, _, t, e, gt, st, c, ass):
 				if (gt == null)
 					gt = "default";
 				if (st == null)
 					st = "default";
 
-				if (s == true)
-					add("static ");
+				if (ass != null) for(s in ass) {
+					add(s + " ");
+				}
 				if (c) {
 					add("final " + n);
 				} else {
@@ -305,9 +337,10 @@ class Printer {
 				add("break");
 			case EContinue:
 				add("continue");
-			case EFunction(params, e, _, name, ret, s):
-				if (s == true)
-					add("static ");
+			case EFunction(params, e, _, name, ret, ass):
+				if (ass != null) for(s in ass) {
+					add(s + " ");
+				}
 				add("function");
 				if (name != null)
 					add(" " + name);
@@ -518,5 +551,9 @@ class Printer {
 		#else
 		return message;
 		#end
+	}
+
+	public inline static function stringInsert(s:String, pos:Int, sm:String) {
+		return s.substr(0, pos) + sm + s.substr(pos);
 	}
 }

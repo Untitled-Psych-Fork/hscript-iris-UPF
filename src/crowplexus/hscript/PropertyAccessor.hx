@@ -25,6 +25,7 @@ class PropertyAccessor {
 	public function get(name: String): Dynamic {
 		if (link_getFunc == null && proxy == null)
 			return null;
+		if(!inState) inState = true;
 		return switch (getter) {
 			case "default":
 				link_getFunc();
@@ -38,11 +39,11 @@ class PropertyAccessor {
 					if (this.isStatic)
 						Interp.staticVariables;
 					else
-						proxy.variables;
+						proxy.directorFields;
 				}
-				if (Reflect.isFunction(variables.get('get_$name'))) {
+				if (variables.get('get_$name') != null && variables.get('get_$name').type == "func") {
 					inState = false;
-					var ret: Dynamic = Reflect.callMethod(null, variables.get('get_$name'), []);
+					var ret: Dynamic = Reflect.callMethod(null, variables.get('get_$name').value, []);
 					inState = true;
 					return ret;
 				} else
@@ -56,6 +57,7 @@ class PropertyAccessor {
 	public function set(name: String, value: Dynamic) {
 		if (link_setFunc == null && proxy == null)
 			return null;
+		if(!inState) inState = true;
 		return switch (setter) {
 			case "default":
 				link_setFunc(value);
@@ -71,9 +73,9 @@ class PropertyAccessor {
 					else
 						proxy.variables;
 				}
-				if (Reflect.isFunction(variables.get('set_$name'))) {
+				if (variables.get('set_$name') != null && variables.get('set_$name').type == "func") {
 					inState = false;
-					var ret: Dynamic = Reflect.callMethod(null, variables.get('set_$name'), [value]);
+					var ret: Dynamic = Reflect.callMethod(null, variables.get('set_$name').value, [value]);
 					inState = true;
 					return ret;
 				} else

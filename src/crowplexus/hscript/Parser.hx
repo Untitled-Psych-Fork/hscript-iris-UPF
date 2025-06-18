@@ -120,9 +120,10 @@ class Parser {
 	var idents: Array<Bool>;
 	var uid: Int = 0;
 	var abductCount: Int = 0;
-	var abducts = ["function", "if", "for", "while", "try", "switch", "do"];
-	var sureStaticModifier: Bool = false;
+	var abducts = ["if", "for", "while", "try", "switch", "do"];
+	@:noCompletion var sureStaticModifier: Bool = false;
 	@:noCompletion var interpolationState:Bool = false;
+	@:noCompletion var lastInjectors:Array<String>;
 	var compatibles: Array<Bool> = [];
 
 	#if hscriptPos
@@ -435,7 +436,7 @@ class Parser {
 					compatibles.push(true);
 					abductCount++;
 				}
-				var e = parseStructure(id);
+				var e = parseStructure(id, tk);
 				if (abducts.contains(id)) {
 					while (compatibles.length > ttime)
 						compatibles.pop();
@@ -680,7 +681,7 @@ class Parser {
 		}
 	}
 
-	function parseStructure(id) {
+	function parseStructure(id, ?tt:Token) {
 		#if hscriptPos
 		var p1 = tokenMin;
 		#end
@@ -706,93 +707,15 @@ class Parser {
 						push(TSemicolon);
 				}
 				mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenMax : pmax(e2));
-			case "static":
-				if (abductCount == 0) {
-					var t = token();
-					switch (t) {
-						case TId(byd):
-							if (byd == "var" || byd == "final" || byd == "function") {
-								sureStaticModifier = true;
-								var ret = parseStructure(byd);
-								sureStaticModifier = false;
-								return ret;
-							} else if (byd == "inline") {
-								if (!maybe(TId("function")))
-									return unexpected(TId(byd));
-								sureStaticModifier = true;
-								var ret = parseStructure("function");
-								sureStaticModifier = false;
-								return ret;
-							} else unexpected(TId(byd));
-						default: unexpected(TId(id));
-					}
-				} else
-					error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
-				null;
+			case id if(modifierContainer.contains(id)):
+				if(abductCount != 0) unexpected(tt);
+				if(tt != null) push(tt);
+				else push(TId(id));
+				injectorModifier();
 			case "var", "final":
-				var getter: String = "default";
-				var setter: String = "default";
-				var ident = getIdent();
-				var tk = token();
-				var t = null;
-				#if IRIS_DEBUG
-				trace("变量名：" + ident + "，" + "层次：" + abductCount);
-				#end
-				if (tk == TPOpen) {
-					if (abductCount == 0 && id == "var") {
-						var getter1: Null<String> = null;
-						var setter1: Null<String> = null;
-						var displayComma: Bool = false;
-						var closed: Bool = false;
-						while (true) {
-							var t = token();
-							switch (t) {
-								case TComma:
-									if (getter != null && !displayComma) {
-										displayComma = true;
-									} else unexpected(t);
-								case TId(byd):
-									if (getter1 == null && !displayComma) {
-										if (byd == "get" || byd == "never" || byd == "default" || byd == "null") {
-											getter1 = byd;
-										} else
-											unexpected(t);
-									} else if (setter1 == null && displayComma) {
-										if (byd == "set" || byd == "never" || byd == "default" || byd == "null") {
-											setter1 = byd;
-										} else
-											unexpected(t);
-									} else unexpected(t);
-								case TPClose:
-									if (getter1 != null && setter1 != null) closed = true; else unexpected(t);
-								default:
-									unexpected(t);
-							}
-
-							if (closed)
-								break;
-						}
-
-						if (getter1 != null)
-							getter = getter1;
-						if (setter1 != null)
-							setter = setter1;
-
-						tk = token();
-					} else
-						unexpected(tk);
-				}
-				if (tk == TDoubleDot && allowTypes) {
-					t = parseType();
-					tk = token();
-				}
-				var e = null;
-				if (Type.enumEq(tk, TOp("=")))
-					e = parseExpr();
-				else
-					push(tk);
-				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if (abductCount == 0) sureStaticModifier else false), p1,
-					(e == null) ? tokenMax : pmax(e));
+				if(tt != null) push(tt);
+				else push(TId(id));
+				injectorModifier();
 			case "while":
 				var econd = parseExpr();
 				var e = parseExpr();
@@ -817,43 +740,10 @@ class Parser {
 			case "break": mk(EBreak);
 			case "continue": mk(EContinue);
 			case "else": unexpected(TId(id));
-			case "inline":
-				var t = token();
-				switch (t) {
-					case TId(id):
-						if (id == "static") {
-							if (!sureStaticModifier && abductCount == 0) {
-								if (abductCount == 0) {
-									var t = token();
-									switch (t) {
-										case TId(byd):
-											if (byd == "function") {
-												sureStaticModifier = true;
-												var ret = parseStructure(byd);
-												sureStaticModifier = false;
-												return ret;
-											} else unexpected(TId(id));
-										default: unexpected(TId(id));
-									}
-								} else
-									error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
-								return null;
-							}
-						} else if (id == "function") {
-							return parseStructure("function");
-						}
-					default: // nothing here
-				}
-				unexpected(t);
 			case "function":
-				var tk = token();
-				var name = null;
-				switch (tk) {
-					case TId(id): name = id;
-					default: push(tk);
-				}
-				var inf = parseFunctionDecl();
-				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if (abductCount == 0) sureStaticModifier else false), p1, pmax(inf.body));
+				if(tt != null) push(tt);
+				else push(TId(id));
+				injectorModifier();
 			case "return":
 				var tk = token();
 				push(tk);
@@ -1129,6 +1019,129 @@ class Parser {
 				mk(EIgnore(false));
 			default:
 				null;
+		}
+	}
+
+	var modifierContainer:Array<String> = ["private", "public", "inline", "static"];
+	private function injectorModifier(?injectors:Array<String>) {
+		var t = token();
+		return switch(t) {
+			case TId(id) if(modifierContainer.contains(id)):
+				if(injectors == null) injectors = [];
+				injectors.push(id);
+				while(true) {
+					var tk = token();
+					switch(tk) {
+						case TId(id) if(modifierContainer.contains(id)):
+							if(!injectors.contains(id) &&
+								!(injectors.contains("public") && id == "private") &&
+								!(injectors.contains("private") && id == "public")
+							) injectors.push(id);
+							else unexpected(tk);
+						case _:
+							push(tk);
+							break;
+					}
+				}
+				injectorModifier(injectors);
+			case TId(id) if(id == "final" || id == "var"):
+				if(injectors != null && injectors.contains("inline")) error(ECustom("Cannot Use \"inline\" Modifier For claiming \"final\", \"var\" In Short."), tokenMin, tokenMax);
+				var getter: String = "default";
+				var setter: String = "default";
+				var ident = getIdent();
+				var tk = token();
+				var t = null;
+				#if IRIS_DEBUG
+				trace("变量名：" + ident + "，" + "层次：" + abductCount);
+				#end
+				if (tk == TPOpen) {
+					if (abductCount == 0 && id == "var") {
+						var getter1: Null<String> = null;
+						var setter1: Null<String> = null;
+						var displayComma: Bool = false;
+						var closed: Bool = false;
+						while (true) {
+							var t = token();
+							switch (t) {
+								case TComma:
+									if (getter != null && !displayComma) {
+										displayComma = true;
+									} else unexpected(t);
+								case TId(byd):
+									if (getter1 == null && !displayComma) {
+										if (byd == "get" || byd == "never" || byd == "default" || byd == "null") {
+											getter1 = byd;
+										} else
+											unexpected(t);
+									} else if (setter1 == null && displayComma) {
+										if (byd == "set" || byd == "never" || byd == "default" || byd == "null") {
+											setter1 = byd;
+										} else
+											unexpected(t);
+									} else unexpected(t);
+								case TPClose:
+									if (getter1 != null && setter1 != null) closed = true; else unexpected(t);
+								default:
+									unexpected(t);
+							}
+
+							if (closed)
+								break;
+						}
+
+						if (getter1 != null)
+							getter = getter1;
+						if (setter1 != null)
+							setter = setter1;
+
+						tk = token();
+					} else
+						unexpected(tk);
+				}
+				if (tk == TDoubleDot && allowTypes) {
+					t = parseType();
+					tk = token();
+				}
+
+				var ttime = compatibles.length;
+				if (abducts.contains(id)) {
+					compatibles.push(true);
+					abductCount++;
+				}
+				var e = null;
+				if (Type.enumEq(tk, TOp("=")))
+					e = parseExpr();
+				else
+					push(tk);
+				if (abducts.contains(id)) {
+					while (compatibles.length > ttime)
+						compatibles.pop();
+					abductCount--;
+				}
+				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if(abductCount == 0 && injectors != null) injectors else null), tokenMin,
+					(e == null) ? tokenMax : pmax(e));
+			case TId(id) if(id == "function"):
+				var tk = token();
+				var name = null;
+				switch (tk) {
+					case TId(id): name = id;
+					default: push(tk);
+				}
+				var ttime = compatibles.length;
+				if (abducts.contains(id)) {
+					compatibles.push(true);
+					abductCount++;
+				}
+				var inf = parseFunctionDecl();
+				if (abducts.contains(id)) {
+					while (compatibles.length > ttime)
+						compatibles.pop();
+					abductCount--;
+				}
+
+				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if(abductCount == 0 && injectors != null) injectors else null), tokenMin, pmax(inf.body));
+			case _:
+				unexpected(t);
 		}
 	}
 
