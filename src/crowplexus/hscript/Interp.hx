@@ -55,7 +55,7 @@ class Interp {
 	 * 还是觉得直接包装成静态更好一点（不模仿）
 	 */
 	static var staticVariables: #if haxe3 Map<String, {var value:Dynamic; var type:String; var const:Bool;}> = new Map() #else Hash<{var value:Dynamic; var type:String; var const:Bool;}> = new Hash() #end;
-	public inline static function getStaticVariable(name:String):Dynamic {
+	public inline static function getStaticFieldValue(name:String):Dynamic {
 		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
 		return null;
 	}
