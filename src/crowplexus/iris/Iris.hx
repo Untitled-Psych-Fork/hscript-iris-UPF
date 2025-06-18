@@ -382,15 +382,15 @@ class Iris {
 			args = [];
 
 		// fun-ny
-		var ny: Dynamic = interp.variables.get(fun); // function signature
+		var ny: Dynamic = interp.directorFields.get(fun); // function signature
 		var isFunction: Bool = false;
 		try {
-			isFunction = ny != null && Reflect.isFunction(ny);
+			isFunction = ny != null && ny.type == "func" && Reflect.isFunction(ny.value);
 			if (!isFunction)
 				throw 'Tried to call a non-function, for "$fun"';
 			// throw "Variable not found or not callable, for \"" + fun + "\"";
 
-			final ret = Reflect.callMethod(null, ny, args);
+			final ret = Reflect.callMethod(null, ny.value, args);
 			return {funName: fun, signature: ny, returnValue: ret};
 		}
 		// @formatter:off
@@ -416,7 +416,7 @@ class Iris {
 		if (interp == null)
 			trace("[Iris:exists()]: " + interpErrStr + ", returning false...");
 		#end
-		return (interp != null) ? interp.variables.exists(field) : false;
+		return (interp != null) ? interp.directorFields.get(field) != null : false;
 	}
 
 	/**
