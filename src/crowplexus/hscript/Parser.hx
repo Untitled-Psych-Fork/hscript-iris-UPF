@@ -424,6 +424,21 @@ class Parser {
 		return parseExprNext(mk(EObject(fl), p1));
 	}
 
+	function automaticAbduct(condition:Bool, func:haxe.Constraints.Function, ?args:Array<Dynamic>) {
+		var ttime = compatibles.length;
+		if (condition) {
+			compatibles.push(true);
+			abductCount++;
+		}
+		var e = Reflect.callMethod(this, func, (args == null ? [] : args));
+		if (condition) {
+			while (compatibles.length > ttime)
+				compatibles.pop();
+			abductCount--;
+		}
+		return e;
+	}
+
 	function parseExpr() {
 		var tk = token();
 		#if hscriptPos
@@ -431,17 +446,7 @@ class Parser {
 		#end
 		switch (tk) {
 			case TId(id):
-				var ttime = compatibles.length;
-				if (abducts.contains(id)) {
-					compatibles.push(true);
-					abductCount++;
-				}
-				var e = parseStructure(id, tk);
-				if (abducts.contains(id)) {
-					while (compatibles.length > ttime)
-						compatibles.pop();
-					abductCount--;
-				}
+				var e = automaticAbduct(abducts.contains(id), parseStructure, [id, tk]);
 				if (e == null)
 					e = mk(EIdent(id));
 				return parseExprNext(e);
@@ -458,9 +463,7 @@ class Parser {
 				tk = token();
 				if (tk == TPClose) {
 					ensureToken(TOp("->"));
-					abductCount++;
-					var eret = parseExpr();
-					abductCount--;
+					var eret = automaticAbduct(true, parseExpr);
 					return mk(EFunction([], mk(EReturn(eret), p1), abductCount), p1);
 				}
 				push(tk);
@@ -607,7 +610,7 @@ class Parser {
 			}
 		}
 		ensureToken(TOp("->"));
-		var eret = parseExpr();
+		var eret = automaticAbduct(true, parseExpr);
 		return mk(EFunction(args, mk(EReturn(eret), pmin), abductCount), pmin);
 	}
 
@@ -1082,7 +1085,7 @@ class Parser {
 		}
 	}
 
-	var modifierContainer:Array<String> = ["private", "public", "inline", "static"];
+	var modifierContainer:Array<String> = ["private", "public", "inline", "static", "dynamic"];
 	private function injectorModifier(?injectors:Array<String>) {
 		var t = token();
 		return switch(t) {
@@ -1095,7 +1098,9 @@ class Parser {
 						case TId(id) if(modifierContainer.contains(id)):
 							if(!injectors.contains(id) &&
 								!(injectors.contains("public") && id == "private") &&
-								!(injectors.contains("private") && id == "public")
+								!(injectors.contains("private") && id == "public") &&
+								!(injectors.contains("dynamic") && id == "inline") &&
+								!(injectors.contains("inline") && id == "dynamic")
 							) injectors.push(id);
 							else unexpected(tk);
 						case _:
@@ -1105,17 +1110,17 @@ class Parser {
 				}
 				injectorModifier(injectors);
 			case TId(id) if(id == "final" || id == "var"):
-				if(injectors != null && injectors.contains("inline")) error(ECustom("Cannot Use \"inline\" Modifier For claiming \"final\", \"var\" In Short."), tokenMin, tokenMax);
 				var getter: String = "default";
 				var setter: String = "default";
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
+				if(injectors != null && injectors.contains("dynamic")) error(ECustom("Invalid accessor 'dynamic' for variable -> " + ident), tokenMin, tokenMax);
 				#if IRIS_DEBUG
 				trace("变量名：" + ident + "，" + "层次：" + abductCount);
 				#end
 				if (tk == TPOpen) {
-					if (abductCount == 0 && id == "var") {
+					if (!(injectors != null && injectors.contains("inline")) && abductCount == 0 && id == "var") {
 						var getter1: Null<String> = null;
 						var setter1: Null<String> = null;
 						var displayComma: Bool = false;
@@ -1163,21 +1168,13 @@ class Parser {
 					tk = token();
 				}
 
-				var ttime = compatibles.length;
-				if (abducts.contains(id)) {
-					compatibles.push(true);
-					abductCount++;
-				}
-				var e = null;
-				if (Type.enumEq(tk, TOp("=")))
-					e = parseExpr();
-				else
-					push(tk);
-				if (abducts.contains(id)) {
-					while (compatibles.length > ttime)
-						compatibles.pop();
-					abductCount--;
-				}
+				var e = automaticAbduct(true, function(tk) {
+					if (Type.enumEq(tk, TOp("=")))
+						return parseExpr();
+					else
+						push(tk);
+					return null;
+				}, [tk]);
 				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if(abductCount == 0 && injectors != null) injectors else null), tokenMin,
 					(e == null) ? tokenMax : pmax(e));
 			case TId(id) if(id == "function"):
@@ -1365,14 +1362,10 @@ class Parser {
 					// single arg reinterpretation of `f -> e` , `(f) -> e` and `(f:T) -> e`
 					switch (expr(e1)) {
 						case EIdent(i), EParent(expr(_) => EIdent(i)):
-							abductCount++;
-							var eret = parseExpr();
-							abductCount--;
+							var eret = automaticAbduct(true, parseExpr);
 							return mk(EFunction([{name: i}], mk(EReturn(eret), pmin(eret)), abductCount), pmin(e1));
 						case ECheckType(expr(_) => EIdent(i), t):
-							abductCount++;
-							var eret = parseExpr();
-							abductCount--;
+							var eret = automaticAbduct(true, parseExpr);
 							return mk(EFunction([{name: i, t: t}], mk(EReturn(eret), pmin(eret)), abductCount), pmin(e1));
 						default:
 					}
