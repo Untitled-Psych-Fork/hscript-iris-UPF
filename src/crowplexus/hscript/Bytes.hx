@@ -59,6 +59,7 @@ enum abstract BytesExpr(ByteInt) from ByteInt to ByteInt {
 	var EEnum = 28;
 	var EDirectValue = 29;
 	var EUsing = 30;
+	var EEReg = 31;
 }
 
 enum abstract BytesConst(ByteInt) from ByteInt to ByteInt {
@@ -365,7 +366,7 @@ class Bytes {
 		#end
 		switch (e) {
 			case EIgnore(_):
-			case EEReg(_, _): // 不会写QAQ
+			case EEReg(r, opt):
 			case EConst(c):
 				doEncodeExprType(EConst);
 				doEncodeConst(c);
@@ -565,6 +566,8 @@ class Bytes {
 		return switch (type) {
 			case EConst:
 				EConst(doDecodeConst());
+			case EEReg:
+				EEReg(doDecodeString(), doDecodeString());
 			case EIdent:
 				EIdent(doDecodeString());
 			case EVar:

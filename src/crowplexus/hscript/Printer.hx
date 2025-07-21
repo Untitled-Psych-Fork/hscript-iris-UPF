@@ -185,11 +185,9 @@ class Printer {
 										var interporation = "${" + buf.toString().substr(old) + "}";
 										s = Printer.stringInsert(s, sm.pos + inPos , interporation);
 										inPos += interporation.length;
-										#if cpp
-										while(buf.length > old) buf.b.pop();
-										#else
-										buf.b = buf.b.substr(0, buf.length - old);
-										#end
+										final oldBuf = buf.toString();
+										buf = new StringBuf();
+										buf.add(oldBuf.substr(0, old));
 									}
 								}
 							}
@@ -243,7 +241,7 @@ class Printer {
 				}
 			case EEReg(i, opt):
 				add("~/");
-				add(i);
+				add(i.split("/").join("\\/"));
 				add("/");
 				if (opt != null)
 					add(opt);

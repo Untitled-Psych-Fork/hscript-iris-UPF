@@ -44,6 +44,14 @@ class LocalVar {
 }
 
 @:structInit
+class DirectorField {
+	public var value:Dynamic;
+	public var type:String;
+	public var const:Bool;
+	/*@:optional*/ public var isInline:Bool;
+}
+
+@:structInit
 class DeclaredVar {
 	public var n: String;
 	public var old: LocalVar;
@@ -54,7 +62,7 @@ class Interp {
 	/**
 	 * 还是觉得直接包装成静态更好一点（不模仿）
 	 */
-	static var staticVariables: #if haxe3 Map<String, {var value:Dynamic; var type:String; var const:Bool;}> = new Map() #else Hash<{var value:Dynamic; var type:String; var const:Bool;}> = new Hash() #end;
+	static var staticVariables: #if haxe3 Map<String, DirectorField> = new Map() #else Hash<DirectorField> = new Hash() #end;
 	public inline static function getStaticFieldValue(name:String):Dynamic {
 		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
 		return null;
@@ -62,7 +70,7 @@ class Interp {
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
-	public var directorFields: Map<String, {var value:Dynamic; var type:String; var const:Bool;}>;
+	public var directorFields: Map<String, DirectorField>;
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
 
@@ -70,7 +78,7 @@ class Interp {
 	var binops: Map<String, Expr->Expr->Dynamic>;
 	var propertyLinks: Map<String, PropertyAccessor>;
 	#else
-	public var directorFields: Hash<{var value:Dynamic; var type:String; var const:Bool;}>;
+	public var directorFields: Hash<DirectorField>;
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
 
@@ -217,15 +225,23 @@ class Interp {
 
 		if(directorFields.get(name) != null) {
 			var l = directorFields.get(name);
-			if(l.const || l.type == "func") {
-				warn(ECustom("Cannot reassign final & function, for constant expression -> " + name));
+			if(l.const) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+			} else if(l.type == "func") {
+				warn(ECustom("Cannot reassign function, for constant expression -> " + name));
+			} else if(l.isInline) {
+				warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 			} else {
 				l.value = v;
 			}
 		} else if(staticVariables.get(name) != null) {
 			var l = staticVariables.get(name);
-			if(l.const || l.type == "func") {
-				warn(ECustom("Cannot reassign final & function, for constant expression -> " + name));
+			if(l.const) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+			} else if(l.type == "func") {
+				warn(ECustom("Cannot reassign function, for constant expression -> " + name));
+			} else if(l.isInline) {
+				warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 			} else {
 				l.value = v;
 			}
@@ -557,6 +573,8 @@ class Interp {
 					#end
 				}
 			case EIdent(id):
+				if(id == "false" && id == "true" && id == "null")
+					return variables.get(id);
 				return resolve(id);
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
 				if (getter == null)
@@ -565,12 +583,20 @@ class Interp {
 					setter = "default";
 
 				var v = (v == null ? null : expr(v));
+				if(ass != null && ass.contains("inline")) {
+					var tv = Type.typeof(v);
+					switch(tv) {
+						case Type.ValueType.TNull | Type.ValueType.TFloat | Type.ValueType.TInt | Type.ValueType.TBool | Type.ValueType.TClass(String):
+						default:
+							error(ECustom("Inline variable initialization must be a constant value"));
+					}
+				}
 				if (ass != null && ass.contains("static")) {
 					if (staticVariables.get(n) == null) {
 						if (isConst)
-							staticVariables.set(n, {value: v, type: "var", const: isConst});
+							staticVariables.set(n, {value: v, type: "var", const: isConst, isInline: ass != null && ass.contains("inline")});
 						else {
-							staticVariables.set(n, {value: v, type: "var", const: isConst});
+							staticVariables.set(n, {value: v, type: "var", const: isConst, isInline: ass != null && ass.contains("inline")});
 							if (getter != "default" || setter != "default") {
 								propertyLinks.set(n, new PropertyAccessor(this, () -> {
 									if (staticVariables.get(n) != null)
@@ -590,7 +616,7 @@ class Interp {
 					}
 				} else {
 					if (!isConst && de == 0 && (getter != "default" || setter != "default")) {
-						directorFields.set(n, {value: v, const: isConst, type: "var"});
+						directorFields.set(n, {value: v, const: isConst, type: "var", isInline: ass != null && ass.contains("inline")});
 						propertyLinks.set(n, new PropertyAccessor(this, () -> {
 							if (directorFields.get(n) != null)
 								return directorFields.get(n).value;
@@ -606,7 +632,7 @@ class Interp {
 						}, getter, setter));
 					} else {
 						if (de == 0) {
-							directorFields.set(n, {value: v, const: isConst, type: "var"});
+							directorFields.set(n, {value: v, const: isConst, type: "var", isInline: ass != null && ass.contains("inline")});
 						} else {
 							declared.push({n: n, old: locals.get(n)});
 							locals.set(n, {r: v, const: isConst});
@@ -700,7 +726,15 @@ class Interp {
 					return imports.get(n);
 
 				var c: Dynamic = getOrImportClass(v);
-				if (c == null) // if it's still null then throw an error message.
+				/*if (c == null) {
+					var subv = v.substr(0, v.lastIndexOf("."));
+					var psubv = v.substr(v.lastIndexOf(".") + 1)
+					var subc = getOrImportClass(subv);
+					if(subc != null) {
+						
+					}
+				}*/
+				if(c == null)
 					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
 				else {
 					imports.set(n, c);
@@ -775,9 +809,9 @@ class Interp {
 						// global function
 						if (ass != null && ass.contains("static")) {
 							if (staticVariables.get(name) == null)
-								staticVariables.set(name, {value: f, type: "func", const: false});
+								staticVariables.set(name, {value: f, type: "func", const: false, isInline: ass != null && ass.contains("inline")});
 						} else {
-							directorFields.set(name, {value: f, type: "func", const: false});
+							directorFields.set(name, {value: f, type: "func", const: false, isInline: ass != null && ass.contains("inline")});
 						}
 					} else {
 						// function-in-function is a local function
