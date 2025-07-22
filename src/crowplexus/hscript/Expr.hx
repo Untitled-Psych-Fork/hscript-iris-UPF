@@ -90,7 +90,7 @@ enum Expr
 	EDoWhile(cond:Expr, e:Expr);
 	EMeta(name:String, args:Array<Expr>, e:Expr);
 	ECheckType(e:Expr, t:CType);
-	EClass(className:String, exn:Null<String>, imn:Array<String>, fields:Array<FieldDecl>);
+	EClass(className:String, exn:Null<String>, imn:Array<String>, fields:Array<BydFieldDecl>, ?pkg:Array<String>);
 	EEnum(name:String, fields:Array<EnumType>);
 	EDirectValue(value:Dynamic);
 	EUsing(name:String);
@@ -203,6 +203,11 @@ typedef TypeDecl = {
 	var t: CType;
 }
 
+typedef BydFieldDecl = {
+	> FieldDecl,
+	var pos:Expr;
+}
+
 typedef FieldDecl = {
 	var name: String;
 	var meta: Metadata;
@@ -235,6 +240,7 @@ typedef VarDecl = {
 	var set: Null<String>;
 	var expr: Null<Expr>;
 	var type: Null<CType>;
+	var ?isConst: Bool;
 }
 
 enum EnumType {

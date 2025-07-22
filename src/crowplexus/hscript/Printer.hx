@@ -28,9 +28,16 @@ class Printer {
 	var buf: StringBuf;
 	var tabs: String;
 
-	var indent: String = "  ";
+	var indent: String = "";
 
-	public function new() {}
+	public function new(?bit:Int = 2, useT:Bool = false) {
+		if(!useT) for(i in 0...bit) {
+			indent += " ";
+		}
+		else {
+			indent = "\t";
+		}
+	}
 
 	public function exprToString(e: Expr) {
 		buf = new StringBuf();
@@ -161,6 +168,83 @@ class Printer {
 		addType(a.t);
 	}
 
+	function printClassField(field:BydFieldDecl) {
+		add("\n");
+		if(field.meta != null) {
+			for(md in field.meta) {
+				add(tabs);
+				add("@");
+				add(md.name);
+				if(md.params != null && md.params.length > 0) {
+					add("(");
+					for(arg in md.params) {
+						expr(arg);
+					}
+					add(")");
+				}
+				add("\n");
+			}
+		}
+		add(tabs);
+		if(field.access != null) for(modi in field.access) {
+			add(switch(modi) {
+				case APublic: "public";
+				case AStatic: "static";
+				case AInline: "inline";
+				case AOverride: "override";
+				case AMacro: "macro";
+				case APrivate: "private";
+			});
+			add(" ");
+		}
+		switch(field.kind) {
+			case KVar(decl):
+				add("var ");
+				add(field.name);
+				if(
+					(decl.get != null && decl.get != "default") ||
+					(decl.set != null && decl.set != "default")
+				) {
+					add("(");
+					add(decl.get);
+					add(", ");
+					add(decl.set);
+					add(")");
+				}
+				if(decl.type != null) {
+					addType(decl.type);
+				}
+				if(decl.expr != null) {
+					add(" = ");
+					expr(decl.expr);
+				}
+				add(";");
+			case KFunction(decl):
+				add("function ");
+				add(field.name);
+				add("(");
+				if(decl.args != null && decl.args.length > 0) for(i=>arg in decl.args) {
+					if(arg.opt) {
+						add("?");
+					}
+					add(arg.name);
+					if(arg.t != null) addType(arg.t);
+					if(arg.value != null) {
+						add(" = ");
+						expr(arg.value);
+					}
+					if(i < decl.args.length - 1) {
+						add(", ");
+					}
+				}
+				add(")");
+				if(decl.ret != null) addType(decl.ret);
+				add(" ");
+				expr(decl.expr);
+		}
+		add("\n");
+	}
+
 	function expr(e: Expr) {
 		if (e == null) {
 			add("??NULL??");
@@ -182,9 +266,16 @@ class Printer {
 				}
 				add(" {");
 				if(d != null && d.length > 0) {
-					add("/*");
-					add("(Sorry. Can't print fields in short)");
-					add("*/");
+					//add("/*");
+					//add("(Sorry. Can't print fields in short)");
+					//add("*/");
+					incrementIndent();
+					for(sb in d) {
+						if(sb == null) continue;
+						printClassField(sb);
+					}
+					decrementIndent();
+				add(tabs);
 				}
 				add("}");
 			case EConst(c):

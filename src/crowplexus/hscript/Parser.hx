@@ -966,7 +966,7 @@ class Parser {
 					push(t);
 					fields.push(parseClassField());
 				}
-				mk(EClass(className, extendedClassName, interfacesNames, fields));
+				mk(EClass(className, extendedClassName, interfacesNames, fields, packageName?.split(".")));
 			case "enum":
 				if(abductCount > 0) unexpected(TId(id));
 				var name = getIdent();
@@ -1203,7 +1203,7 @@ class Parser {
 	}
 
 	private var modifiers:Array<String> = ["public", "static", "override", "private", "inline"];
-	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):FieldDecl {
+	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):BydFieldDecl {
 		var t = token();
 		return switch(t) {
 			case TMeta(name):
@@ -1282,6 +1282,7 @@ class Parser {
 					ctype = t;
 					tk = token();
 				}
+				var pos = mk(EIgnore(true));
 				var e = null;
 				if (Type.enumEq(tk, TOp("=")))
 					e = parseExpr();
@@ -1297,6 +1298,7 @@ class Parser {
 						set: setter,
 						expr: e,
 						type: ctype,
+						isConst: (id == "final")
 					}),
 					access: {
 						final real:Array<FieldAccess> = [];
@@ -1310,7 +1312,8 @@ class Parser {
 								case _:
 							}
 						real;
-					}
+					},
+					pos: pos
 				};
 			case TId(id) if(id == "function"):
 				var name = getIdent();
@@ -1325,6 +1328,7 @@ class Parser {
 					else
 						ret = parseType();
 				}
+				var pos = mk(EIgnore(true));
 				var es = [];
 				parseFullExpr(es);
 				return {
@@ -1347,7 +1351,8 @@ class Parser {
 								case _:
 							}
 						real;
-					}
+					},
+					pos: pos
 				};
 			default:
 				unexpected(t);

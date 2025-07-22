@@ -58,6 +58,7 @@ class DeclaredVar {
 }
 
 @:allow(crowplexus.hscript.PropertyAccessor)
+@:allow(crowplexus.hscript.scriptclass.ScriptClassInterp)
 class Interp {
 	/**
 	 * 还是觉得直接包装成静态更好一点（不模仿）
@@ -67,6 +68,8 @@ class Interp {
 		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
 		return null;
 	}
+
+	private static var scriptClasses:#if haxe3 Map<String, crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -121,7 +124,7 @@ class Interp {
 	var curExpr: Expr;
 	#end
 
-	public var showPosOnLog: Bool = true;
+	public var showPosOnLog: Bool = false;
 
 	public function new() {
 		#if haxe3
@@ -213,7 +216,7 @@ class Interp {
 		assignOp("??" + "=", function(v1, v2) return v1 == null ? v2 : v1);
 	}
 
-	public inline function setVar(name: String, v: Dynamic) {
+	public function setVar(name: String, v: Dynamic) {
 		if (propertyLinks.get(name) != null) {
 			var l = propertyLinks.get(name);
 			if (l.inState)
@@ -514,6 +517,10 @@ class Interp {
 			if (_parentFields.contains(id) || _parentFields.contains('get_$id')) {
 				return Reflect.getProperty(parentInstance, id);
 			}
+		}
+
+		if(scriptClasses.exists(id)) {
+			return scriptClasses.get(id);
 		}
 
 		if (imports.exists(id)) {
@@ -936,8 +943,9 @@ class Interp {
 				return expr(e);
 			case ECheckType(e, _):
 				return expr(e);
-			case EClass(clName, exName, imName, fields):
-				return e;
+			case EClass(clName, exName, imName, fields, pkg):
+				var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
+				scriptClasses.set(clName, cl);
 			case EEnum(enumName, fields):
 				var obj = {};
 				for (index => field in fields) {
@@ -1079,6 +1087,9 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+		if(o is IScriptReadable) {
+			return cast(o, IScriptReadable).sc_get(f);
+		}
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -1096,6 +1107,12 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+
+		if(o is IScriptReadable) {
+			cast(o, IScriptReadable).sc_set(f, v);
+			return v;
+		}
+
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
@@ -1219,6 +1236,9 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
+		if(scriptClasses.exists(cl)) {
+			return scriptClasses.get(cl).createInstance(args);
+		}
 		var c = Type.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
