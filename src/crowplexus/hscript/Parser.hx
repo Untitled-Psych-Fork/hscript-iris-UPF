@@ -1116,9 +1116,6 @@ class Parser {
 				var tk = token();
 				var t = null;
 				if(injectors != null && injectors.contains("dynamic")) error(ECustom("Invalid accessor 'dynamic' for variable -> " + ident), tokenMin, tokenMax);
-				#if IRIS_DEBUG
-				trace("变量名：" + ident + "，" + "层次：" + abductCount);
-				#end
 				if (tk == TPOpen) {
 					if (!(injectors != null && injectors.contains("inline")) && abductCount == 0 && id == "var") {
 						var getter1: Null<String> = null;
@@ -1229,9 +1226,6 @@ class Parser {
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
-				#if IRIS_DEBUG
-				trace("变量名：" + ident + "，" + "层次：" + abductCount);
-				#end
 				if (tk == TPOpen) {
 					if (id == "var") {
 						var getter1: Null<String> = null;

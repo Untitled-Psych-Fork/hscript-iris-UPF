@@ -1,17 +1,16 @@
 package crowplexus.hscript.scriptclass;
 
 import crowplexus.hscript.Interp;
-import crowplexus.hscript.IScriptReadable;
 import crowplexus.hscript.Expr;
 import crowplexus.iris.Iris;
 
 @:allow(crowplexus.hscript.scriptclass.ScriptClassInterp)
-class ScriptClassInstance implements IScriptReadable {
+class ScriptClassInstance extends BaseScriptClass {
 	public var name:String;
 	public var extend:String;
+	public var superClass:Dynamic;
 
 	private var constructorArgs:Array<Dynamic>;
-	private var superClass:Dynamic;
 	var __ogInterp:Interp;
 	var __interp:Interp;
 	var fields:Array<BydFieldDecl>;
@@ -36,11 +35,15 @@ class ScriptClassInstance implements IScriptReadable {
 		callConstructor();
 	}
 
-	public function sc_exists(name:String):Bool {
+	public inline function superExistsFunction(f:String):Bool {
+		return cacheSuperFieldsName.contains("__SC_SUPER_" + f);
+	}
+
+	public override function sc_exists(name:String):Bool {
 		@:privateAccess return (superClass != null && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("get_" + name))) || __interp.propertyLinks.get(name) != null || __interp.directorFields.get(name) != null || __interp.variables.exists(name);
 	}
 
-	public function sc_get(name:String):Dynamic {
+	public override function sc_get(name:String):Dynamic {
 		@:privateAccess {
 			if(superClass != null) {
 				if(!overrides.contains(name) && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("get_" + name))) {
@@ -69,7 +72,7 @@ class ScriptClassInstance implements IScriptReadable {
 		}
 	}
 
-	public function sc_set(name:String, value:Dynamic) {
+	public override function sc_set(name:String, value:Dynamic) {
 		@:privateAccess {
 			if(superClass != null) {
 				if(!overrides.contains(name) && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("set_" + name))) {
@@ -103,7 +106,7 @@ class ScriptClassInstance implements IScriptReadable {
 		}
 	}
 
-	public function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
+	public override function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
 		if(superClass != null && overrides.contains(name)) {
 			var l = __interp.directorFields.get(name);
 			if(l != null && l.type == "func") {
@@ -136,7 +139,8 @@ class ScriptClassInstance implements IScriptReadable {
 		if(needExtend()) {
 			var cls = __interp.imports.get(extend);
 			__interp.variables.set("super", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
-				this.superClass = Type.createInstance(cls, args);
+				if(sureScriptedClass()) Type.createInstance(cls, [cast this].concat(args));
+				else this.superClass = Type.createInstance(cls, args);
 			}));
 
 			for(field in fields) {
@@ -204,6 +208,10 @@ class ScriptClassInstance implements IScriptReadable {
 						});
 				}
 		}
+	}
+
+	inline function sureScriptedClass():Bool {
+		return cacheSuperFieldsName.contains("__sc_standClass");
 	}
 
 	function parseConstructor() {

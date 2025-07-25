@@ -3,10 +3,9 @@ package crowplexus.hscript.scriptclass;
 import crowplexus.hscript.Interp;
 import crowplexus.hscript.Expr;
 import crowplexus.iris.Iris;
-import crowplexus.hscript.IScriptReadable;
 
 @:access(crowplexus.hscript.scriptclass.ScriptClassInstance)
-class ScriptClass implements IScriptReadable {
+class ScriptClass extends BaseScriptClass {
 	public var name:String;
 	public var extend:String;
 	public var packages:Array<String>;
@@ -39,11 +38,11 @@ class ScriptClass implements IScriptReadable {
 		parseStaticFields();
 	}
 
-	public function sc_exists(name:String):Bool {
+	public override function sc_exists(name:String):Bool {
 		@:privateAccess return staticInterp.directorFields.get(name) != null || staticInterp.propertyLinks.get(name) != null || staticInterp.variables.exists(name);
 	}
 
-	public function sc_get(name:String):Dynamic {
+	public override function sc_get(name:String):Dynamic {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
 			var l = staticInterp.propertyLinks.get(name);
@@ -66,7 +65,7 @@ class ScriptClass implements IScriptReadable {
 		}
 	}
 
-	public function sc_set(name:String, value:Dynamic) {
+	public override function sc_set(name:String, value:Dynamic) {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
 				var l = staticInterp.propertyLinks.get(name);
@@ -93,7 +92,7 @@ class ScriptClass implements IScriptReadable {
 		}
 	}
 
-	public function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
+	public override function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
 		if(Reflect.isFunction(sc_get(name)))
 			return Reflect.callMethod(null, sc_get(name), args ?? []);
 		return null;

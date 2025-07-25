@@ -120,6 +120,8 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
+	var fieldDotLayer:Int;
+
 	#if hscriptPos
 	var curExpr: Expr;
 	#end
@@ -280,7 +282,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
+				fieldDotLayer++;
 				var e = expr(e);
+				fieldDotLayer--;
 				if (e == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -322,7 +326,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
+				fieldDotLayer++;
 				var obj = expr(e);
+				fieldDotLayer--;
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -374,7 +380,9 @@ class Interp {
 				}
 				return v;
 			case EField(e, f, s):
+				fieldDotLayer++;
 				var obj = expr(e);
+				fieldDotLayer--;
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -463,6 +471,7 @@ class Interp {
 	}
 
 	inline function error(e: #if hscriptPos ErrorDef #else Error #end, rethrow = false): Dynamic {
+		fieldDotLayer = 0;
 		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, curExpr.origin, curExpr.line); #end
 		if (rethrow)
 			this.rethrow(e)
@@ -582,7 +591,13 @@ class Interp {
 			case EIdent(id):
 				if(id == "false" && id == "true" && id == "null")
 					return variables.get(id);
-				return resolve(id);
+				final re = resolve(id);
+				//这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
+				if(fieldDotLayer == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if(cls.superClass != null) return cls.superClass;
+				}
+				return re;
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
 				if (getter == null)
 					getter = "default";
@@ -657,12 +672,17 @@ class Interp {
 				restore(old);
 				return v;
 			case EField(e, f, true):
+				fieldDotLayer++;
 				var e = expr(e);
+				fieldDotLayer--;
 				if (e == null)
 					return null;
 				return get(e, f);
 			case EField(e, f, false):
-				return get(expr(e), f);
+				fieldDotLayer++;
+				var re = expr(e);
+				fieldDotLayer--;
+				return get(re, f);
 			case EBinop(op, e1, e2):
 				var fop = binops.get(op);
 				if (fop == null)
@@ -695,7 +715,9 @@ class Interp {
 
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
+						fieldDotLayer++;
 						var obj = expr(e);
+						fieldDotLayer--;
 						if (obj == null)
 							if (!s)
 								error(EInvalidAccess(f));
@@ -889,7 +911,12 @@ class Interp {
 				var a = new Array();
 				for (e in params)
 					a.push(expr(e));
-				return cnew(cl, a);
+				var re = cnew(cl, a);
+				if(fieldDotLayer == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if(cls.superClass != null) return cls.superClass;
+				}
+				return re;
 			case EThrow(e):
 				throw expr(e);
 			case ETry(e, n, _, ecatch):
@@ -1087,8 +1114,8 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if(o is IScriptReadable) {
-			return cast(o, IScriptReadable).sc_get(f);
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
 		}
 		return {
 			#if php
@@ -1108,8 +1135,8 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
-		if(o is IScriptReadable) {
-			cast(o, IScriptReadable).sc_set(f, v);
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
 			return v;
 		}
 

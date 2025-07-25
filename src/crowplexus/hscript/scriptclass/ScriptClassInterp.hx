@@ -13,6 +13,50 @@ class ScriptClassInterp extends Interp {
 		this.variables.set("this", scriptClass);
 	}
 
+	override function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
+		if (o == null)
+			error(EInvalidAccess(f));
+
+		if(o is IScriptedClass) {
+			if(scriptClass.superExistsFunction(f)) {
+				Reflect.setProperty(o, "__SC_SUPER_" + f, v);
+				return v;
+			}
+		}
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
+			return v;
+		}
+
+		Reflect.setProperty(o, f, v);
+		return v;
+	}
+
+	override function get(o: Dynamic, f: String): Dynamic {
+		if (o == null)
+			error(EInvalidAccess(f));
+		if(o is IScriptedClass) {
+			if(scriptClass.superExistsFunction(f)) {
+				return Reflect.getProperty(o, "__SC_SUPER_" + f);
+			}
+		}
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		}
+		return {
+			#if php
+			// https://github.com/HaxeFoundation/haxe/issues/4915
+			try {
+				Reflect.getProperty(o, f);
+			} catch (e:Dynamic) {
+				Reflect.field(o, f);
+			}
+			#else
+			Reflect.getProperty(o, f);
+			#end
+		}
+	}
+
 	override function setVar(name: String, v: Dynamic) {
 		if (propertyLinks.get(name) != null) {
 			var l = propertyLinks.get(name);

@@ -1,6 +1,7 @@
 package crowplexus.hscript.proxy;
 
 import crowplexus.hscript.Tools.EnumValue as HEnumValue;
+import crowplexus.hscript.scriptclass.*;
 
 // TODO: for most of these, support hscript enums
 // which don't quite work, but here we are
@@ -12,7 +13,10 @@ class ProxyType {
 
 		In general, type parameter information cannot be obtained at runtime.
 	**/
-	inline static function getClass<T>(o: T): Null<Class<T>> {
+	inline static function getClass<T>(o: T): Null<Dynamic> {
+		if(o is ScriptClassInstance) {
+			@:privateAccess return cast(o, ScriptClassInstance).urDad;
+		}
 		return Type.getClass(o);
 	}
 
@@ -59,7 +63,10 @@ class ProxyType {
 
 		The class name does not include any type parameters.
 	**/
-	inline static function getClassName(c: Class<Dynamic>): String {
+	inline static function getClassName(c: Dynamic): String {
+		if(c is ScriptClass) {
+			return cast(c, ScriptClass).fullPath;
+		}
 		return Type.getClassName(c);
 	}
 
@@ -97,7 +104,14 @@ class ProxyType {
 
 		The class name must not include any type parameters.
 	**/
-	inline static function resolveClass(name: String): Class<Dynamic> {
+	inline static function resolveClass(name: String): Dynamic {
+		@:privateAccess {
+			for(k=>v in Interp.scriptClasses) {
+				if(v.fullPath == name) {
+					return v;
+				}
+			}
+		}
 		return Type.resolveClass(name);
 	}
 
@@ -135,7 +149,10 @@ class ProxyType {
 		In particular, default values of constructor arguments are not
 		guaranteed to be taken into account.
 	**/
-	inline static function createInstance<T>(cl: Class<T>, args: Array<Dynamic>): T {
+	inline static function createInstance(cl: Dynamic, args: Array<Dynamic>): Dynamic {
+		if(cl is ScriptClass) {
+			return cast(cl, ScriptClass).createInstance(args);
+		}
 		return Type.createInstance(cl, args);
 	}
 
@@ -146,7 +163,10 @@ class ProxyType {
 
 		If `cl` is null, the result is unspecified.
 	**/
-	inline static function createEmptyInstance<T>(cl: Class<T>): T {
+	inline static function createEmptyInstance<T>(cl: Dynamic): T {
+		if(cl is ScriptClass) {
+			throw "Cannot Create Empty Instance For Script Class.";
+		}
 		return Type.createEmptyInstance(cl);
 	}
 
@@ -193,7 +213,11 @@ class ProxyType {
 
 		If `c` is null, the result is unspecified.
 	**/
-	inline static function getInstanceFields(c: Class<Dynamic>): Array<String> {
+	inline static function getInstanceFields(c: Dynamic): Array<String> {
+		@:privateAccess if(c is ScriptClass) {
+			var rc:ScriptClass = cast c;
+			var fields:Array<String> = [for(f in rc.fields.filter((f) -> !(f.access != null && f.access.contains(AStatic)) && f.name != "new")) f.name];
+		}
 		return Type.getInstanceFields(c);
 	}
 
@@ -206,7 +230,11 @@ class ProxyType {
 
 		If `c` is null, the result is unspecified.
 	**/
-	inline static function getClassFields(c: Class<Dynamic>): Array<String> {
+	inline static function getClassFields(c: Dynamic): Array<String> {
+		@:privateAccess if(c is ScriptClass) {
+			var rc:ScriptClass = cast c;
+			var fields:Array<String> = [for(f in rc.fields.filter((f) -> f.access != null && f.access.contains(AStatic))) f.name];
+		}
 		return Type.getClassFields(c);
 	}
 
