@@ -1,4 +1,4 @@
-package crowplexus.hscript.scriptclass.macros;
+package crowplexus.iris.macro;
 
 import haxe.macro.Expr;
 import haxe.macro.Context;

@@ -1,6 +1,6 @@
 package crowplexus.hscript.scriptclass;
 
-@:autoBuild(crowplexus.hscript.scriptclass.macros.ScriptedClassMacro.build())
+@:autoBuild(crowplexus.iris.macro.ScriptedClassMacro.build())
 interface IScriptedClass {
 
 }

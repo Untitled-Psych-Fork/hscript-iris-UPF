@@ -113,22 +113,22 @@ class ScriptClass extends BaseScriptClass {
 						});
 						if((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
 							if(decl.get == "get" && Lambda.find(this.fields, (f) -> f.name == ("get_" + field.name) && field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
-								staticInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
+								ogInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
 							if(decl.set == "set" && Lambda.find(this.fields, (f) -> f.name == ("set_" + field.name) && f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
-								staticInterp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
+								ogInterp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
 							staticInterp.propertyLinks.set(field.name, new PropertyAccessor(staticInterp, () -> {
 								final n = field.name;
 								if (staticInterp.directorFields.get(n) != null)
 									return staticInterp.directorFields.get(n).value;
 								else
-									throw staticInterp.error(EUnknownVariable(n));
+									throw ogInterp.error(EUnknownVariable(n));
 								return null;
 							}, (val) -> {
 								final n = field.name;
 								if (staticInterp.directorFields.get(n) != null)
 									staticInterp.directorFields.get(n).value = val;
 								else
-									throw staticInterp.error(EUnknownVariable(n));
+									throw ogInterp.error(EUnknownVariable(n));
 								return val;
 							}, decl.get ?? "default", decl.set ?? "default"));
 						}
@@ -169,7 +169,7 @@ class ScriptClass extends BaseScriptClass {
 			}
 			var func = function(args:Array<Dynamic>) {
 					if(args.length < minParams) {
-						staticInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
+						ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
 					}
 
 					// make sure mandatory args are forced
@@ -232,6 +232,7 @@ class ScriptClass extends BaseScriptClass {
 
 	private function syncParent(s:Interp) {
 		@:privateAccess s.imports = ogInterp.imports;
+		s.variables.set("trace", ogInterp.variables.get("trace"));
 	}
 
 	public function toString():String {

@@ -1,0 +1,25 @@
+//用于传输
+
+//正常的var
+public static var plus:Int = 0;
+
+//final级
+public static final unchanged:Int = 114514;
+
+//inline修饰词的var
+public static inline var onlyconsted:String = "R-18";
+
+//正经的function
+public static inline function letGiveYourPerfect(s:String):String {
+	return "Perfect: " + s;
+}
+
+//property级的var
+public static var idk(get, set):Float = -3.14;
+@:noCompletion static function get_idk():Float {
+	return idk;
+}
+@:noCompletion static function set_idk(val:Float):Float {
+	trace("field 'idk' Changed: " + idk + " -> " + val);
+	return idk = val;
+}

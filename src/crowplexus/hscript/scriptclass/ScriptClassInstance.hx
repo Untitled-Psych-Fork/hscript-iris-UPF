@@ -29,9 +29,9 @@ class ScriptClassInstance extends BaseScriptClass {
 
 		__interp = new ScriptClassInterp(this);
 		syncParent(__interp);
+		resolveSuperClass();
 		parseConstructor();
 		parseInstanceField();
-		resolveSuperClass();
 		callConstructor();
 	}
 
@@ -93,11 +93,11 @@ class ScriptClassInstance extends BaseScriptClass {
 			if(__interp.directorFields.get(name) != null) {
 				var l = __interp.directorFields.get(name);
 				if(l.const) {
-					__ogInterp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+					__interp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
 				} else if(l.type == "func") {
-					__ogInterp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
+					__interp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
 				} else if(l.isInline) {
-					__ogInterp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
+					__interp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 				} else {
 					l.value = value;
 				}
@@ -120,11 +120,12 @@ class ScriptClassInstance extends BaseScriptClass {
 	}
 
 	private function callConstructor() {
+		@:privateAccess 
 		if(sc_exists("new")) {
 			this.sc_call("new", this.constructorArgs);
 			if(needExtend()) {
 				this.__interp.variables.remove("super");
-				@:privateAccess if(this.superClass == null) __ogInterp.error(ECustom("Missing 'super()' Called"));
+				if(this.superClass == null) __ogInterp.error(ECustom("Missing 'super()' Called"));
 				else this.__interp.variables.set("super", this.superClass);
 			}
 		} else if(needExtend()) {
@@ -148,9 +149,11 @@ class ScriptClassInstance extends BaseScriptClass {
 					if(!cacheSuperFieldsName.contains(field.name)) __ogInterp.error(ECustom("Cannot not override this field as Script Class '" + name + "' Super Class has not the field -> '" + field.name + "'"));
 					if(field.kind.match(KFunction(_))) {
 						this.overrides.push(field.name);
-					} else __ogInterp.error(ECustom("unexpected this field '" + field.name + "' as 'override' only applies to function"));
+					} else __ogInterp.error(ECustom("Unexpected this field '" + field.name + "' as 'override' only applies to function"));
 				}
 			}
+		} else if(extend != null && __interp.imports.get(extend) == null) {
+			__ogInterp.error(ECustom("Invalid Extended Class -> '" + extend + "'"));
 		}
 	}
 
@@ -180,22 +183,22 @@ class ScriptClassInstance extends BaseScriptClass {
 						});
 						if((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
 							if(decl.get == "get" && Lambda.find(this.fields, (f) -> f.name == ("get_" + field.name) && !field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
-								__interp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
+								__ogInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
 							if(decl.set == "set" && Lambda.find(this.fields, (f) -> f.name == ("set_" + field.name) && !f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
-								__interp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
+								__ogInterp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
 							__interp.propertyLinks.set(field.name, new PropertyAccessor(__interp, () -> {
 								final n = field.name;
 								if (__interp.directorFields.get(n) != null)
 									return __interp.directorFields.get(n).value;
 								else
-									throw __interp.error(EUnknownVariable(n));
+									throw __ogInterp.error(EUnknownVariable(n));
 								return null;
 							}, (val) -> {
 								final n = field.name;
 								if (__interp.directorFields.get(n) != null)
 									__interp.directorFields.get(n).value = val;
 								else
-									throw __interp.error(EUnknownVariable(n));
+									throw __ogInterp.error(EUnknownVariable(n));
 								return val;
 							}, decl.get ?? "default", decl.set ?? "default"));
 						}
@@ -229,12 +232,15 @@ class ScriptClassInstance extends BaseScriptClass {
 				case _:
 			}
 		} else if(!needExtend()) {
-			__interp.error(ECustom("ScriptClass '" + name + "' has not constructor."));
+			trace("aha");
+			__ogInterp.error(ECustom("ScriptClass '" + name + "' has not constructor."));
+			trace("aha");
 		}
 	}
 
 	private function syncParent(s:Interp) {
 		@:privateAccess s.imports = __ogInterp.imports;
+		s.variables.set("trace", __ogInterp.variables.get("trace"));
 	}
 
 	private function parseValDecl(decl:VarDecl) {
@@ -262,7 +268,7 @@ class ScriptClassInstance extends BaseScriptClass {
 			}
 			var func = function(args:Array<Dynamic>) {
 					if(args.length < minParams) {
-						__interp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
+						__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
 					}
 
 					// make sure mandatory args are forced

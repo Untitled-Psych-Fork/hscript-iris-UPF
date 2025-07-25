@@ -1,0 +1,10 @@
+-L hscript-iris-improved
+-D hscriptPos
+-D analyzer-optimize
+-D IRIS_DEBUG
+
+-cp source
+-main Main
+
+-cpp export/cpp
+--cmd ./export/cpp/Main

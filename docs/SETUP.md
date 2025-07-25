@@ -1,13 +1,6 @@
 # INSTALLATION
 
-For stable versions, use this
-
-```
-haxelib install hscript-iris
-```
-
-For unstable versions however, use this
-
+Input This To Download.
 ```
 haxelib git hscript-iris-improved https://github.com/NovaFlare-Engine-Concentration/hscript-iris-improved
 ```

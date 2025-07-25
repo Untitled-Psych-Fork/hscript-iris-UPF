@@ -1,0 +1,24 @@
+//这是我用来临时测试的，无
+import samples.GroupSample;
+import samples.ObjectSample;
+import scripted.ScriptedBaseSample;
+
+class MySample extends ScriptedBaseSample {
+	override function working() {
+		if(this.input != null) {
+			output = "Editing Result: " + Std.string(this.input);
+		}
+	}
+}
+
+var os = new ObjectSample();
+var sample = new MySample();
+
+var gs = new GroupSample();
+gs.push(os);
+gs.push(sample);
+
+gs.inputContent({trace: "gp"});
+
+gs.working();
+trace(gs.outputs);
