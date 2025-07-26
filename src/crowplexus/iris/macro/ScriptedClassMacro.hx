@@ -54,7 +54,7 @@ class ScriptedClassMacro {
 					this.__sc_standClass.superClass = this;
 					super($a{fnargs});
 				},
-				params: con.typeParams
+				//params: con.typeParams
 			}),
 			pos: Context.currentPos()
 		};
@@ -203,12 +203,12 @@ class ScriptedClassMacro {
 		return tp;
 	}
 
+	static var curTps:Array<TypeParamDecl> = null;
 	private static function getOverrides(cls:ClassType):Array<ChouxiangFunction> {
 		var funcs:Array<ChouxiangFunction> = [];
 		var superCls:ClassType = cls.superClass?.t.get();
 		//禁止黑名单参赛者复赛
 		var blacklist:Array<String> = [];
-		//var tpss:Array<TypeParamDecl> = getSuperclassParams(cls);
 		//var pause:Bool = false;
 
 		while(superCls != null) {
@@ -232,6 +232,7 @@ class ScriptedClassMacro {
 						tps.push(tp);
 					}
 				}
+				curTps = tps;
 				switch(f.kind) {
 					case FMethod(mk) if(Type.enumEq(mk, MethNormal)):
 						if(Lambda.find(funcs, (fun) -> fun.name == f.name) == null) {
@@ -269,6 +270,7 @@ class ScriptedClassMacro {
 					case _:
 						blacklist.push(f.name);
 				}
+				curTps = null;
 			}
 			superCls = superCls.superClass?.t.get();
 		}
@@ -291,6 +293,9 @@ class ScriptedClassMacro {
 					case KTypeParameter(idks):
 						for(idk in idks) {
 							return toComplexType(idk);
+						}
+						if(curTps != null && curTps.length > 0) for(ct in curTps) {
+							if(ct.name == ctrl.get().name) return Context.toComplexType(t);
 						}
 						return toComplexType(TDynamic(null));
 					case _:
