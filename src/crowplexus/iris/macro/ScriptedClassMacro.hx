@@ -205,6 +205,8 @@ class ScriptedClassMacro {
 	private static function getOverrides(cls:ClassType):Array<ChouxiangFunction> {
 		var funcs:Array<ChouxiangFunction> = [];
 		var superCls:ClassType = cls.superClass?.t.get();
+		//禁止黑名单参赛者复赛
+		var blacklist:Array<String> = [];
 		//var tpss:Array<TypeParamDecl> = getSuperclassParams(cls);
 		//var pause:Bool = false;
 
@@ -216,8 +218,9 @@ class ScriptedClassMacro {
 			//		tpss.push(tp);
 			//	}
 			//}
-			for(f in superCls.fields.get()) {
-				if(Lambda.find(funcs, (field) -> field.name == f.name) != null) {
+			var overrides:Array<ClassField> = [for(o in superCls.overrides) o.get()];
+			for(f in overrides.concat(superCls.fields.get())) {
+				if(Lambda.find(funcs, (field) -> field.name == f.name) != null || blacklist.contains(f.name)) {
 					continue;
 				}
 				var tps:Array<TypeParamDecl> = [];
@@ -262,6 +265,7 @@ class ScriptedClassMacro {
 							funcs.push(func);
 						}
 					case _:
+						blacklist.push(f.name);
 				}
 			}
 			superCls = superCls.superClass?.t.get();
@@ -288,7 +292,10 @@ class ScriptedClassMacro {
 						}
 						return toComplexType(TDynamic(null));
 					case _:
+						return TPath(toTypePath(ctrl.get(), grp));
 				}
+			case TLazy(f):
+				return toComplexType(f());
 			case TFun(args, ret):
 				var newArgs:Array<ComplexType> = [];
 				var newRet:ComplexType = toComplexType(ret);
@@ -306,6 +313,17 @@ class ScriptedClassMacro {
 			switch (type) {
 				case TInst(_.get() => {kind: KExpr(e)}, _): TPExpr(e);
 				case _: TPType(toComplexType(type));
+			}
+		}
+
+	static function toTypePath(baseType:BaseType, params:Array<Type>):TypePath
+		return {
+			var module = baseType.module;
+			{
+				pack: baseType.pack,
+				name: module.substring(module.lastIndexOf(".") + 1),
+				sub: baseType.name,
+				params: [for (t in params) toTypeParam(t)],
 			}
 		}
 }
