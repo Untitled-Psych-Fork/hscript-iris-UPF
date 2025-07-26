@@ -80,7 +80,8 @@ class ScriptedClassMacro {
 					args: [],
 					typeParams: tps,
 					ret: null,
-					doThisReturn: false
+					doThisReturn: false,
+					meta: field.meta.get()
 				};
 				switch(field.kind) {
 					case FMethod(pd) if(Type.enumEq(pd, MethNormal)):
@@ -118,7 +119,7 @@ class ScriptedClassMacro {
 			var fnargs = [for(arg in fn.args) macro $i{arg.name}];
 			fields.push({
 				name: SUPER_FUNCTION_PREFIX + fn.name,
-				meta: [{name: ":untyped", pos: Context.currentPos()}],
+				meta: fn.meta,
 				kind: FFun({
 					args: [for(arg in fn.args) {type: arg.ret, name: arg.name, value: arg.value}],
 					params: fn.typeParams,
@@ -142,7 +143,7 @@ class ScriptedClassMacro {
 			fields.push({
 				name: fname,
 				access: [AOverride],
-				meta: [{name: ":untyped", pos: Context.currentPos()}],
+				meta: fn.meta,
 				kind: FFun({
 					args: [for(arg in fn.args) {type: arg.ret, name: arg.name, value: arg.value}],
 					params: fn.typeParams,
@@ -239,7 +240,8 @@ class ScriptedClassMacro {
 								args: [],
 								typeParams: tps,
 								ret: toComplexType(f.type),
-								doThisReturn: true
+								doThisReturn: true,
+								meta: f.meta.get()
 							};
 							var expr = f.expr();
 							if(expr != null) {
@@ -334,6 +336,7 @@ typedef ChouxiangFunction = {
 	var typeParams:Array<TypeParamDecl>;
 	var ret:ComplexType;
 	var doThisReturn:Bool;
+	var meta:Metadata;
 }
 
 typedef ChouxiangArg = {
