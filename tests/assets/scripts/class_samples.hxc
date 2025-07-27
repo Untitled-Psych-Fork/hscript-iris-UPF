@@ -9,6 +9,10 @@ class MySample extends ScriptedBaseSample {
 			output = "Editing Result: " + Std.string(this.input);
 		}
 	}
+
+	override function inputContent(content:Dynamic) {
+		super.inputContent(content);
+	}
 }
 
 var os = new ObjectSample();

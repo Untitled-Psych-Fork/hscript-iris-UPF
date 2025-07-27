@@ -204,8 +204,12 @@ class ScriptClass extends BaseScriptClass {
 					var oldDecl = staticInterp.declared.length;
 					if (staticInterp.inTry)
 						try {
+							if(name != null) staticInterp.inFunction = name;
+							else staticInterp.inFunction = '(Invalid Function Name.)';
 							r = staticInterp.exprReturn(decl.expr, false);
+							staticInterp.inFunction = null;
 						} catch (e:Dynamic) {
+							staticInterp.inFunction = null;
 							staticInterp.locals = old;
 							staticInterp.depth = depth;
 							#if neko
@@ -214,8 +218,12 @@ class ScriptClass extends BaseScriptClass {
 							throw e;
 							#end
 						}
-					else
+					else {
+						if(name != null) staticInterp.inFunction = name;
+						else staticInterp.inFunction = '(Invalid Function Name.)';
 						r = staticInterp.exprReturn(decl.expr, false);
+						staticInterp.inFunction = null;
+					}
 					staticInterp.restore(oldDecl);
 					staticInterp.locals = old;
 					staticInterp.depth = depth;

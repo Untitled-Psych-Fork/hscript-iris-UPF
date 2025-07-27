@@ -28,6 +28,8 @@ enum Const {
 	CInt(v: Int);
 	CFloat(f: Float);
 	CString(s: String, ?sm: Array<{var e:Expr; var pos:Int;}>);
+	CSuper;
+	CEReg(r:String, ?opt:String);
 	#if !haxe3
 	CInt32(v:haxe.Int32);
 	#end
@@ -80,7 +82,6 @@ enum Expr
 	EReturn(?e:Expr);
 	EArray(e:Expr, index:Expr);
 	EArrayDecl(e:Array<Expr>);
-	EEReg(r:String, ?opt:String);
 	ENew(cl:String, params:Array<Expr>);
 	EThrow(e:Expr);
 	ETry(e:Expr, v:String, t:Null<CType>, ecatch:Expr);

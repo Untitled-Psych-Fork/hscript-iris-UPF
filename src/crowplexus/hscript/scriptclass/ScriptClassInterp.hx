@@ -17,12 +17,7 @@ class ScriptClassInterp extends Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
-		if(o is IScriptedClass) {
-			if(scriptClass.superExistsFunction(f)) {
-				Reflect.setProperty(o, "__SC_SUPER_" + f, v);
-				return v;
-			}
-		}
+		//我傻逼
 		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
 			return v;
@@ -101,7 +96,7 @@ class ScriptClassInterp extends Interp {
 	}
 
 	override function resolve(id: String): Dynamic {
-				var l = locals.get(id);
+		var l = locals.get(id);
 		if (l != null)
 			return l.r;
 
@@ -162,6 +157,26 @@ class ScriptClassInterp extends Interp {
 
 		error(EUnknownVariable(id));
 
+		return null;
+	}
+
+	override function super_call(args:Array<Dynamic>):Dynamic {
+		if(scriptClass.needExtend())
+			scriptClass.createSuperClassInstance(args);
+		else error(ECustom("Current class does not have a super"));
+		return null;
+	}
+
+	override function super_field_call(field:String, args:Array<Dynamic>):Dynamic {
+		if(scriptClass.superClass != null) {
+			if(scriptClass.superClass is IScriptedClass) {
+				if(scriptClass.superExistsFunction(field)) {
+					return call(null, Reflect.getProperty(scriptClass.superClass, "__SC_SUPER_" + field), args);
+				} else error(ECustom("Invalid Calling -> super." + field + "()"));
+			} else {
+				return call(null, get(scriptClass.superClass, field), args);
+			}
+		} else error(ECustom("Current class does not have a super"));
 		return null;
 	}
 }

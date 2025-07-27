@@ -282,6 +282,13 @@ class Printer {
 				switch (c) {
 					case CInt(i): add(i);
 					case CFloat(f): add(f);
+					case CSuper: add("super");
+					case CEReg(i, opt):
+						add("~/");
+						add(i.split("/").join("\\/"));
+						add("/");
+						if (opt != null)
+							add(opt);
 					case CString(s, csgo):
 						if(csgo != null && csgo.length > 0) {
 							add("'");
@@ -349,12 +356,6 @@ class Printer {
 					add(" = ");
 					expr(e);
 				}
-			case EEReg(i, opt):
-				add("~/");
-				add(i.split("/").join("\\/"));
-				add("/");
-				if (opt != null)
-					add(opt);
 			case EParent(e):
 				add("(");
 				expr(e);

@@ -454,11 +454,11 @@ class Parser {
 				return parseExprNext(mk(EConst(c)));
 			case TRegex(i, opt):
 				if (opt != null) {
-					if (opt != "i" && opt != "g" && opt != "m" #if (!cs && !js) && opt != "s" #end#if (cpp || neko) && opt != "u" #end) {
-						unexpected(tk);
+					if (opt != "i" && opt != "g" && opt != "m" #if (!cs && !js) && opt != "s" #end #if (cpp || neko) && opt != "u" #end) {
+						error(ECustom(opt + " is not a matching symbol for EReg"), tokenMin, tokenMax);
 					}
 				}
-				return parseExprNext(mk(EEReg(i, opt)));
+				return parseExprNext(mk(EConst(CEReg(i, opt))));
 			case TPOpen:
 				tk = token();
 				if (tk == TPClose) {
@@ -1011,6 +1011,8 @@ class Parser {
 				}
 
 				mk(EEnum(name, fields));
+			case "super":
+				parseExprNext(mk(EConst(CSuper)));
 			case "typedef":
 				if(abductCount > 0) unexpected(TId(id));
 				// typedef Name = Type;
@@ -2483,9 +2485,12 @@ class Parser {
 			case CInt(v): Std.string(v);
 			case CFloat(f): Std.string(f);
 			case CString(s): s; // TODO : escape + quote
+			case CSuper: "super";
 			#if !haxe3
 			case CInt32(v): Std.string(v);
 			#end
+			//CEReg并不会被肘出来（应该吧
+			case _: "???";
 		}
 	}
 

@@ -13,9 +13,27 @@ import Type as OType;
 class ScriptedClassMacro {
 	public static inline var SUPER_FUNCTION_PREFIX:String = "__SC_SUPER_";
 
+	static var noOverrides:Array<String>;
 	public static function build():Array<Field> {
 		var cls:ClassType = Context.getLocalClass().get();
 		if(cls.superClass == null) throw "The specified class requires super class.";
+
+		noOverrides = [];
+		for(meta in cls.meta.get()) {
+			if(meta.name == ":noOverride") {
+				for(param in meta.params) {
+					switch(param.expr) {
+						case EConst(con):
+							switch(con) {
+								case CString(str, _):
+									noOverrides.push(str);
+								case _:
+							}
+						case _:
+					}
+				}
+			}
+		}
 		var fields = [];
 		fields = fields.concat(buildIDKField());
 		var consss = getConstructor(cls);
@@ -119,7 +137,7 @@ class ScriptedClassMacro {
 			var fnargs = [for(arg in fn.args) macro $i{arg.name}];
 			fields.push({
 				name: SUPER_FUNCTION_PREFIX + fn.name,
-				meta: fn.meta,
+				//meta: fn.meta,
 				kind: FFun({
 					args: [for(arg in fn.args) {type: arg.ret, name: arg.name, value: arg.value}],
 					params: fn.typeParams,
@@ -143,7 +161,7 @@ class ScriptedClassMacro {
 			fields.push({
 				name: fname,
 				access: [AOverride],
-				meta: fn.meta,
+				//meta: fn.meta,
 				kind: FFun({
 					args: [for(arg in fn.args) {type: arg.ret, name: arg.name, value: arg.value}],
 					params: fn.typeParams,
@@ -221,7 +239,7 @@ class ScriptedClassMacro {
 			//}
 			var overrides:Array<ClassField> = [for(o in superCls.overrides) o.get()];
 			for(f in overrides.concat(superCls.fields.get())) {
-				if(Lambda.find(funcs, (field) -> field.name == f.name) != null || blacklist.contains(f.name)) {
+				if(Lambda.find(funcs, (field) -> field.name == f.name) != null || blacklist.contains(f.name) || noOverrides.contains(f.name)) {
 					continue;
 				}
 				var tps:Array<TypeParamDecl> = [];

@@ -124,13 +124,10 @@ class ScriptClassInstance extends BaseScriptClass {
 		if(sc_exists("new")) {
 			this.sc_call("new", this.constructorArgs);
 			if(needExtend()) {
-				this.__interp.variables.remove("super");
 				if(this.superClass == null) __ogInterp.error(ECustom("Missing 'super()' Called"));
-				else this.__interp.variables.set("super", this.superClass);
 			}
 		} else if(needExtend()) {
-			Reflect.callMethod(null, this.__interp.variables.get("super"), this.constructorArgs ?? []);
-			this.__interp.variables.remove("super");
+			createSuperClassInstance(this.constructorArgs);
 		}
 	}
 
@@ -139,10 +136,6 @@ class ScriptClassInstance extends BaseScriptClass {
 		@:privateAccess
 		if(needExtend()) {
 			var cls = __interp.imports.get(extend);
-			__interp.variables.set("super", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
-				if(sureScriptedClass()) Type.createInstance(cls, [cast this].concat(args));
-				else this.superClass = Type.createInstance(cls, args);
-			}));
 
 			for(field in fields) {
 				if(field != null && field.access.contains(AOverride)) {
@@ -303,8 +296,12 @@ class ScriptClassInstance extends BaseScriptClass {
 					var oldDecl = __interp.declared.length;
 					if (__interp.inTry)
 						try {
+							if(name != null) __interp.inFunction = name;
+							else __interp.inFunction = '(Invalid Function Name.)';
 							r = __interp.exprReturn(decl.expr, false);
+							__interp.inFunction = null;
 						} catch (e:Dynamic) {
+							__interp.inFunction = null;
 							__interp.locals = old;
 							__interp.depth = depth;
 							#if neko
@@ -313,8 +310,12 @@ class ScriptClassInstance extends BaseScriptClass {
 							throw e;
 							#end
 						}
-					else
+					else {
+						if(name != null) __interp.inFunction = name;
+						else __interp.inFunction = '(Invalid Function Name.)';
 						r = __interp.exprReturn(decl.expr, false);
+						__interp.inFunction = null;
+					}
 					__interp.restore(oldDecl);
 					__interp.locals = old;
 					__interp.depth = depth;
@@ -322,5 +323,11 @@ class ScriptClassInstance extends BaseScriptClass {
 			};
 			return Reflect.makeVarArgs(func);
 		}
+	}
+
+	private function createSuperClassInstance(args:Array<Dynamic>) {
+		var cls:Class<Dynamic> = cast __interp.imports.get(this.extend);
+		if(sureScriptedClass()) Type.createInstance(cls, [cast this].concat(args));
+		else this.superClass = Type.createInstance(cls, args);
 	}
 }

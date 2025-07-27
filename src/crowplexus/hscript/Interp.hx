@@ -120,7 +120,9 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
-	var fieldDotLayer:Int;
+	@:noCompletion var inFunction:Null<String>;
+	var callTP:Bool;
+	var fieldDotRet:Array<String> = [];
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -282,9 +284,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
-				fieldDotLayer++;
+				fieldDotRet.push(f);
 				var e = expr(e);
-				fieldDotLayer--;
+				fieldDotRet.pop();
 				if (e == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -326,9 +328,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
-				fieldDotLayer++;
+				fieldDotRet.push(f);
 				var obj = expr(e);
-				fieldDotLayer--;
+				fieldDotRet.pop();
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -380,9 +382,9 @@ class Interp {
 				}
 				return v;
 			case EField(e, f, s):
-				fieldDotLayer++;
+				fieldDotRet.push(f);
 				var obj = expr(e);
-				fieldDotLayer--;
+				fieldDotRet.pop();
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -471,7 +473,8 @@ class Interp {
 	}
 
 	inline function error(e: #if hscriptPos ErrorDef #else Error #end, rethrow = false): Dynamic {
-		fieldDotLayer = 0;
+		fieldDotRet = [];
+		callTP = false;
 		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, curExpr.origin, curExpr.line); #end
 		if (rethrow)
 			this.rethrow(e)
@@ -584,6 +587,12 @@ class Interp {
 							}
 						}
 						s;
+					case CEReg(i, opt):
+						new EReg(i, (opt != null ? opt : ""));
+					case CSuper:
+						if(fieldDotRet.length > 0) error(ECustom("Normal variables cannot be accessed with 'super', use 'this' instead"));
+						else error(ECustom("Cannot use super as value"));
+						null;
 					#if !haxe3
 					case CInt32(v): v;
 					#end
@@ -593,7 +602,7 @@ class Interp {
 					return variables.get(id);
 				final re = resolve(id);
 				//这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
-				if(fieldDotLayer == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
 					if(cls.superClass != null) return cls.superClass;
 				}
@@ -672,16 +681,16 @@ class Interp {
 				restore(old);
 				return v;
 			case EField(e, f, true):
-				fieldDotLayer++;
+				fieldDotRet.push(f);
 				var e = expr(e);
-				fieldDotLayer--;
+				fieldDotRet.pop();
 				if (e == null)
 					return null;
 				return get(e, f);
 			case EField(e, f, false):
-				fieldDotLayer++;
+				fieldDotRet.push(f);
 				var re = expr(e);
-				fieldDotLayer--;
+				fieldDotRet.pop();
 				return get(re, f);
 			case EBinop(op, e1, e2):
 				var fop = binops.get(op);
@@ -713,18 +722,24 @@ class Interp {
 				for (p in params)
 					args.push(expr(p));
 
+				callTP = true;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
-						fieldDotLayer++;
+						if(Tools.expr(e).match(EConst(CSuper)))
+							return super_field_call(f, args);
+						fieldDotRet.push(f);
 						var obj = expr(e);
-						fieldDotLayer--;
+						fieldDotRet.pop();
 						if (obj == null)
 							if (!s)
 								error(EInvalidAccess(f));
 						return fcall(obj, f, args);
+					case EConst(CSuper):
+						return super_call(args);
 					default:
 						return call(null, expr(e), args);
 				}
+				callTP = false;
 			case EIf(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else if (e2 == null) null else expr(e2);
 			case EWhile(econd, e):
@@ -825,8 +840,9 @@ class Interp {
 							throw e;
 							#end
 						}
-					else
+					else {
 						r = me.exprReturn(fexpr, false);
+					}
 					restore(oldDecl);
 					me.locals = old;
 					me.depth = depth;
@@ -905,14 +921,12 @@ class Interp {
 				} else {
 					return arr[index];
 				}
-			case EEReg(i, opt):
-				return new EReg(i, (opt != null ? opt : ""));
 			case ENew(cl, params):
 				var a = new Array();
 				for (e in params)
 					a.push(expr(e));
 				var re = cnew(cl, a);
-				if(fieldDotLayer == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
 					if(cls.superClass != null) return cls.superClass;
 				}
@@ -1023,6 +1037,16 @@ class Interp {
 			case EUsing(name):
 				useUsing(name);
 		}
+		return null;
+	}
+
+	function super_call(args:Array<Dynamic>):Dynamic {
+		error(ECustom("invalid super()"));
+		return null;
+	}
+
+	function super_field_call(field:String, args:Array<Dynamic>):Dynamic {
+		error(ECustom("invalid super." + field + "()"));
 		return null;
 	}
 

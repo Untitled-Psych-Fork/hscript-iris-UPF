@@ -4,7 +4,9 @@ import samples.*;
 import scripted.*;
 import crowplexus.hscript.Interp;
 import crowplexus.hscript.Parser;
+import crowplexus.hscript.Expr;
 import crowplexus.hscript.scriptclass.IScriptedClass;
+import crowplexus.iris.Iris;
 
 @:build(macros.TestingMacro.build())
 class Main {
@@ -29,6 +31,13 @@ class Main {
 		script.execute();
 	}
 
+	@:testName("regex & interpolation")
+	public static function test_regex_interpolation() {
+		var script:HScript = new HScript("test_regex_interpolation", true);
+		script.set("interpolation_player", "Beihu235");
+		script.execute();
+	}
+
 	public static function test_class_samples() {
 		var script:HScript = new HScript("class_samples");
 		script.execute();
@@ -48,4 +57,13 @@ class Main {
 	static function init() {
 		Assets.init(haxe.io.Path.addTrailingSlash(Sys.getCwd()) + "assets", ["hxc", "hxs"]);
 	}
+}
+
+@:noOverride("loser")
+class TestB extends TestA implements IScriptedClass {}
+
+class TestA {
+	public function new() {}
+
+	public function loser() {}
 }
