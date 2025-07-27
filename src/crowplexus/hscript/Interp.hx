@@ -22,6 +22,7 @@
 
 package crowplexus.hscript;
 
+import crowplexus.hscript.proxy.ProxyType;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
@@ -70,6 +71,65 @@ class Interp {
 	}
 
 	private static var scriptClasses:#if haxe3 Map<String, crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
+	private static var scriptEnums:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+
+	/**
+	 * 指定script class是否存在
+	 * @param path		指定script class路径
+	 */
+	public static inline function existsScriptClass(path:String):Bool {
+		return scriptClasses.exists(path);
+	}
+	/**
+	 * 通过路径获取script class
+	 * @param path		指定script class路径
+	 */
+	public static function resolveScriptClass(path:String):crowplexus.hscript.scriptclass.ScriptClass {
+		if(scriptClasses.exists(path)) {
+			return scriptClasses.get(path);
+		}
+
+		throw "Invalid class path -> " + path;
+		return null;
+	}
+
+	/**
+	 * 指定script enum是否存在
+	 * @param path		指定script enum路径
+	 */
+	public static inline function existsScriptEnum(path:String):Bool {
+		return scriptEnums.exists(path);
+	}
+	/**
+	 * 通过路径获取script enum
+	 * @param path		指定script enum路径
+	 */
+	public static function resolveScriptEnum(path:String):Dynamic {
+		if(scriptEnums.exists(path)) {
+			return scriptEnums.get(path);
+		}
+
+		throw "Invalid enum path -> " + path;
+		return null;
+	}
+
+	/**
+	 * 清除已捕获的静态变量、script class、script enum
+	 */
+	public static function clearCache():Void {
+		staticVariables = #if haxe3 new Map() #else new Hash() #end;
+		scriptClasses = #if haxe3 new Map() #else new Hash() #end;
+		scriptEnums = #if haxe3 new Map() #else new Hash() #end;
+	}
+
+	/**
+	 * 用于限制script class的创建
+	 */
+	public var allowScriptClass:Bool;
+	/**
+	 * 用于限制script enum的创建
+	 */
+	public var allowScriptEnum:Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -91,7 +151,7 @@ class Interp {
 	#end
 
 	/**
-	 * 反狼偷家
+	 * 我不知道这是什么
 	 */
 	public var parentInstance(default, set): Dynamic;
 
@@ -529,10 +589,6 @@ class Interp {
 			if (_parentFields.contains(id) || _parentFields.contains('get_$id')) {
 				return Reflect.getProperty(parentInstance, id);
 			}
-		}
-
-		if(scriptClasses.exists(id)) {
-			return scriptClasses.get(id);
 		}
 
 		if (imports.exists(id)) {
@@ -985,9 +1041,28 @@ class Interp {
 			case ECheckType(e, _):
 				return expr(e);
 			case EClass(clName, exName, imName, fields, pkg):
-				var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
-				scriptClasses.set(clName, cl);
-			case EEnum(enumName, fields):
+				if(!allowScriptClass) {
+					warn(ECustom("Cannot create class because it is not supported"));
+					return null;
+				}
+				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + clName : clName);
+				if(!scriptClasses.exists(fullPath)) {
+					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
+					scriptClasses.set(cl.fullPath, cl);
+					imports.set(clName, cl);
+				} else {
+					warn(ECustom("Cannot create class with the same name, it already exists"));
+				}
+			case EEnum(enumName, fields, pkg):
+				if(!this.allowScriptEnum) {
+					warn(ECustom("Cannot create enum because it is not supported"));
+					return null;
+				}
+				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + enumName : enumName);
+				if(scriptEnums.exists(fullPath)) {
+					warn(ECustom("Cannot create enum with the same name, it already exists"));
+					return null;
+				}
 				var obj = {};
 				for (index => field in fields) {
 					switch (field) {
@@ -1030,8 +1105,8 @@ class Interp {
 							Reflect.setField(obj, name, f);
 					}
 				}
-
-				variables.set(enumName, obj);
+				scriptEnums.set(fullPath, obj);
+				imports.set(enumName, obj);
 			case EDirectValue(value):
 				return value;
 			case EUsing(name):
@@ -1287,12 +1362,10 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
-		if(scriptClasses.exists(cl)) {
-			return scriptClasses.get(cl).createInstance(args);
-		}
-		var c = Type.resolveClass(cl);
+		var c:Null<Dynamic> = ProxyType.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
-		return Type.createInstance(c, args);
+		if(c == null) error(ECustom("Cannot Create Instance By '" + cl + "', Invlalid Class."));
+		return ProxyType.createInstance(c, args);
 	}
 }

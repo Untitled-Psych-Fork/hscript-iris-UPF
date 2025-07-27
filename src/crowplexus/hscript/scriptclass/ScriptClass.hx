@@ -12,7 +12,7 @@ class ScriptClass extends BaseScriptClass {
 
 	public var fullPath(get, never):String;
 	@:noCompletion inline function get_fullPath():String {
-		if(this.packages != null) {
+		if(this.packages != null && this.packages.length > 0) {
 			return this.packages.join(".") + "." + name;
 		}
 		return name;

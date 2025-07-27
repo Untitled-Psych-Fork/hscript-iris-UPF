@@ -1010,7 +1010,7 @@ class Parser {
 					}
 				}
 
-				mk(EEnum(name, fields));
+				mk(EEnum(name, fields, packageName?.split(".")));
 			case "super":
 				parseExprNext(mk(EConst(CSuper)));
 			case "typedef":

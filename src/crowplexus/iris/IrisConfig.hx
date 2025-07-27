@@ -4,6 +4,8 @@ abstract OneOfTwo<T1, T2>(Dynamic) from T1 from T2 to T1 to T2 {}
 
 typedef RawIrisConfig = {
 	var name: String;
+	var ?allowEnum:Bool;
+	var ?allowClass:Bool;
 	var ?autoRun: Bool;
 	var ?autoPreset: Bool;
 	var ?localBlocklist: Array<String>;
@@ -13,6 +15,8 @@ typedef AutoIrisConfig = OneOfTwo<IrisConfig, RawIrisConfig>;
 
 class IrisConfig {
 	public var name: String = null;
+	public var allowEnum:Bool = false;
+	public var allowClass:Bool = false;
 	public var autoRun: Bool = true;
 	public var autoPreset: Bool = true;
 	public var packageName: String = null;
@@ -27,8 +31,10 @@ class IrisConfig {
 	 * @param autoPreset			Makes the script automatically set imports to itself upon creation.
 	 * @param localBlocklist	List of classes or enums that cannot be used within this particular script
 	**/
-	public function new(name: String, autoRun: Bool = true, autoPreset: Bool = true, ?localBlocklist: Array<String>) {
+	public function new(name: String, allowEnum:Bool = false, allowClass:Bool = false, autoRun: Bool = true, autoPreset: Bool = true, ?localBlocklist: Array<String>) {
 		this.name = name;
+		this.allowEnum = allowEnum;
+		this.allowClass = allowClass;
 		this.autoRun = autoRun;
 		this.autoPreset = autoPreset;
 		if (localBlocklist != null)
@@ -39,6 +45,6 @@ class IrisConfig {
 		if (d != null && Std.isOfType(d, IrisConfig))
 			return d;
 		var d: RawIrisConfig = cast d;
-		return new IrisConfig(d.name, d.autoRun, d.autoPreset, d.localBlocklist);
+		return new IrisConfig(d.name, d.allowEnum, d.allowClass, d.autoRun, d.autoPreset, d.localBlocklist);
 	}
 }

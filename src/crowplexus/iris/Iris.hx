@@ -238,6 +238,8 @@ class Iris {
 		parser = new Parser();
 		interp = new Interp();
 		interp.showPosOnLog = false;
+		interp.allowScriptEnum = this.config.allowEnum;
+		interp.allowScriptClass = this.config.allowClass;
 
 		parser.allowTypes = true;
 		parser.allowMetadata = true;

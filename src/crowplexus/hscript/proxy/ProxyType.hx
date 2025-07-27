@@ -13,7 +13,7 @@ class ProxyType {
 
 		In general, type parameter information cannot be obtained at runtime.
 	**/
-	inline static function getClass<T>(o: T): Null<Dynamic> {
+	public inline static function getClass<T>(o: T): Null<Dynamic> {
 		if(o is ScriptClassInstance) {
 			@:privateAccess return cast(o, ScriptClassInstance).urDad;
 		}
@@ -30,7 +30,7 @@ class ProxyType {
 
 		In general, type parameter information cannot be obtained at runtime.
 	**/
-	inline static function getEnum(o: EnumValue): Enum<Dynamic> {
+	public inline static function getEnum(o: EnumValue): Enum<Dynamic> {
 		// TODO: SUPPORT HSCRIPT ENUMS
 		return Type.getEnum(o);
 	}
@@ -44,7 +44,7 @@ class ProxyType {
 
 		In general, type parameter information cannot be obtained at runtime.
 	**/
-	inline static function getSuperClass(c: Class<Dynamic>): Class<Dynamic> {
+	public inline static function getSuperClass(c: Class<Dynamic>): Class<Dynamic> {
 		return Type.getSuperClass(c);
 	}
 
@@ -63,7 +63,7 @@ class ProxyType {
 
 		The class name does not include any type parameters.
 	**/
-	inline static function getClassName(c: Dynamic): String {
+	public inline static function getClassName(c: Dynamic): String {
 		if(c is ScriptClass) {
 			return cast(c, ScriptClass).fullPath;
 		}
@@ -85,7 +85,7 @@ class ProxyType {
 
 		The enum name does not include any type parameters.
 	**/
-	inline static function getEnumName(e: Enum<Dynamic>): String {
+	public inline static function getEnumName(e: Enum<Dynamic>): String {
 		var isScripted: Bool = Std.isOfType(e, HEnumValue);
 		if (isScripted)
 			return cast(e, HEnumValue).getEnumName();
@@ -104,13 +104,9 @@ class ProxyType {
 
 		The class name must not include any type parameters.
 	**/
-	inline static function resolveClass(name: String): Dynamic {
-		@:privateAccess {
-			for(k=>v in Interp.scriptClasses) {
-				if(v.fullPath == name) {
-					return v;
-				}
-			}
+	public inline static function resolveClass(name: String): Dynamic {
+		if(Interp.existsScriptClass(name)) {
+			return Interp.resolveScriptClass(name);
 		}
 		return Type.resolveClass(name);
 	}
@@ -128,7 +124,10 @@ class ProxyType {
 
 		The enum name must not include any type parameters.
 	**/
-	inline static function resolveEnum(name: String): Enum<Dynamic> {
+	public inline static function resolveEnum(name: String): Dynamic {
+		if(Interp.existsScriptEnum(name)) {
+			return Interp.resolveScriptEnum(name);
+		}
 		return Type.resolveEnum(name);
 	}
 
@@ -149,7 +148,7 @@ class ProxyType {
 		In particular, default values of constructor arguments are not
 		guaranteed to be taken into account.
 	**/
-	inline static function createInstance(cl: Dynamic, args: Array<Dynamic>): Dynamic {
+	public inline static function createInstance(cl: Dynamic, args: Array<Dynamic>): Dynamic {
 		if(cl is ScriptClass) {
 			return cast(cl, ScriptClass).createInstance(args);
 		}
@@ -163,7 +162,7 @@ class ProxyType {
 
 		If `cl` is null, the result is unspecified.
 	**/
-	inline static function createEmptyInstance<T>(cl: Dynamic): T {
+	public inline static function createEmptyInstance<T>(cl: Dynamic): T {
 		if(cl is ScriptClass) {
 			throw "Cannot Create Empty Instance For Script Class.";
 		}
@@ -179,7 +178,7 @@ class ProxyType {
 		expected number of constructor arguments, or if any argument has an
 		invalid type, the result is unspecified.
 	**/
-	inline static function createEnum<T>(e: Enum<T>, constr: String, ?params: Array<Dynamic>): T {
+	public inline static function createEnum<T>(e: Enum<T>, constr: String, ?params: Array<Dynamic>): T {
 		// TODO: SUPPORT HSCRIPT ENUMS
 		return Type.createEnum(e, constr, params);
 	}
@@ -196,7 +195,7 @@ class ProxyType {
 		expected number of constructor arguments, or if any argument has an
 		invalid type, the result is unspecified.
 	**/
-	inline static function createEnumIndex<T>(e: Enum<T>, index: Int, ?params: Array<Dynamic>): T {
+	public inline static function createEnumIndex<T>(e: Enum<T>, index: Int, ?params: Array<Dynamic>): T {
 		// TODO: SUPPORT HSCRIPT ENUMS
 		return Type.createEnumIndex(e, index, params);
 	}
@@ -213,7 +212,7 @@ class ProxyType {
 
 		If `c` is null, the result is unspecified.
 	**/
-	inline static function getInstanceFields(c: Dynamic): Array<String> {
+	public inline static function getInstanceFields(c: Dynamic): Array<String> {
 		@:privateAccess if(c is ScriptClass) {
 			var rc:ScriptClass = cast c;
 			var fields:Array<String> = [for(f in rc.fields.filter((f) -> !(f.access != null && f.access.contains(AStatic)) && f.name != "new")) f.name];
@@ -230,7 +229,7 @@ class ProxyType {
 
 		If `c` is null, the result is unspecified.
 	**/
-	inline static function getClassFields(c: Dynamic): Array<String> {
+	public inline static function getClassFields(c: Dynamic): Array<String> {
 		@:privateAccess if(c is ScriptClass) {
 			var rc:ScriptClass = cast c;
 			var fields:Array<String> = [for(f in rc.fields.filter((f) -> f.access != null && f.access.contains(AStatic))) f.name];
@@ -246,7 +245,7 @@ class ProxyType {
 
 		If `e` is null, the result is unspecified.
 	**/
-	inline static function getEnumConstructs(e: Enum<Dynamic>): Array<String> {
+	public inline static function getEnumConstructs(e: Enum<Dynamic>): Array<String> {
 		// TODO: SUPPORT HSCRIPT ENUMS
 		return Type.getEnumConstructs(e);
 	}
@@ -258,7 +257,7 @@ class ProxyType {
 		per platform. Assumptions regarding this should be minimized to avoid
 		surprises.
 	**/
-	inline static function typeof(v: Dynamic): Type.ValueType {
+	public inline static function typeof(v: Dynamic): Type.ValueType {
 		return Type.typeof(v);
 	}
 
@@ -270,7 +269,7 @@ class ProxyType {
 
 		If `a` or `b` are null, the result is unspecified.
 	**/
-	inline static function enumEq(a: Dynamic, b: Dynamic): Bool {
+	public inline static function enumEq(a: Dynamic, b: Dynamic): Bool {
 		var isScripted: Bool = Std.isOfType(a, HEnumValue) && Std.isOfType(b, HEnumValue);
 		if (isScripted)
 			return cast(a, HEnumValue).compare(cast(b, HEnumValue));
@@ -284,7 +283,7 @@ class ProxyType {
 
 		If `e` is null, the result is unspecified.
 	**/
-	inline static function enumConstructor(e: Dynamic): String {
+	public inline static function enumConstructor(e: Dynamic): String {
 		if (Std.isOfType(e, HEnumValue))
 			return cast(e, HEnumValue).name;
 		return Type.enumConstructor(e);
@@ -300,7 +299,7 @@ class ProxyType {
 
 		If `e` is null, the result is unspecified.
 	**/
-	inline static function enumParameters(e: Dynamic): Array<Dynamic> {
+	public inline static function enumParameters(e: Dynamic): Array<Dynamic> {
 		if (Std.isOfType(e, HEnumValue))
 			return cast(e, HEnumValue).args;
 		return Type.enumParameters(e);
@@ -314,7 +313,7 @@ class ProxyType {
 
 		If `e` is null, the result is unspecified.
 	**/
-	inline static function enumIndex(e: Dynamic): Int {
+	public inline static function enumIndex(e: Dynamic): Int {
 		if (Std.isOfType(e, HEnumValue))
 			return cast(e, HEnumValue).index;
 		return Type.enumIndex(e);
@@ -333,7 +332,7 @@ class ProxyType {
 
 		If `e` is null, the result is unspecified.
 	**/
-	inline static function allEnums<T>(e: Enum<T>): Array<T> {
+	public inline static function allEnums<T>(e: Enum<T>): Array<T> {
 		// TODO: SUPPORT HSCRIPT ENUMS
 		return Type.allEnums(e);
 	}

@@ -133,10 +133,6 @@ class ScriptClassInterp extends Interp {
 			}
 		}
 
-		if(Interp.scriptClasses.exists(id)) {
-			return Interp.scriptClasses.get(id);
-		}
-
 		if (imports.exists(id)) {
 			var v = imports.get(id);
 			return v;
