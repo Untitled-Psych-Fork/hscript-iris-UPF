@@ -71,7 +71,7 @@ class PropertyAccessor {
 					if (this.isStatic)
 						Interp.staticVariables;
 					else
-						proxy.variables;
+						proxy.directorFields;
 				}
 				if (variables.get('set_$name') != null && variables.get('set_$name').type == "func") {
 					inState = false;

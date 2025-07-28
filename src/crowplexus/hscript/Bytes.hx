@@ -59,7 +59,6 @@ enum abstract BytesExpr(ByteInt) from ByteInt to ByteInt {
 	var EEnum = 28;
 	var EDirectValue = 29;
 	var EUsing = 30;
-	var EEReg = 31;
 }
 
 enum abstract BytesConst(ByteInt) from ByteInt to ByteInt {
@@ -67,8 +66,10 @@ enum abstract BytesConst(ByteInt) from ByteInt to ByteInt {
 	var CIntByte = 1;
 	var CFloat = 2;
 	var CString = 3;
+	var CSuper = 4;
+	var CEReg = 5;
 	#if !haxe3
-	var CInt32 = 4;
+	var CInt32 = 6;
 	#end
 }
 
@@ -81,6 +82,9 @@ enum abstract BytesIntSize(ByteInt) from ByteInt to ByteInt {
 	var N32;
 }
 
+/**
+ * 事实是，这玩意儿已经被我玩废了:(
+ */
 class Bytes {
 	var bin: haxe.io.Bytes;
 	var bout: haxe.io.BytesBuffer;
@@ -214,6 +218,12 @@ class Bytes {
 					bout.addByte(CInt);
 					doEncodeInt(v);
 				}
+			case CSuper:
+				bout.addByte(CSuper);
+			case CEReg(i, opt):
+				bout.addByte(CEReg);
+				doEncodeString(i);
+				if(opt != null) doEncodeString(opt);
 			case CFloat(f):
 				bout.addByte(CFloat);
 				doEncodeString(Std.string(f));
@@ -264,6 +274,10 @@ class Bytes {
 				CFloat(Std.parseFloat(doDecodeString()));
 			case CString:
 				CString(doDecodeString());
+			case CSuper:
+				CSuper;
+			case CEReg:
+				CEReg(doDecodeString());
 			#if !haxe3
 			case CInt32:
 				var i = bin.get(pin) | (bin.get(pin + 1) << 8) | (bin.get(pin + 2) << 16);
@@ -511,6 +525,8 @@ class Bytes {
 			case ECheckType(e, _):
 				doEncodeExprType(ECheckType);
 				doEncode(e);
+			case EClass(_, _, _, _):
+				//学？学个屁！
 			case EEnum(name, fields):
 				doEncodeExprType(EEnum);
 				doEncodeString(name);

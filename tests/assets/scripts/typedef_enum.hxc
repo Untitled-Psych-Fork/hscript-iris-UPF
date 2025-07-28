@@ -1,0 +1,59 @@
+import samples.BaseSample;
+import samples.IntSample;
+
+//测试typedef
+typedef HHSample = IntSample;
+typedef FloatSample = BaseSample<Float>;
+
+//多种测试
+typedef FirstData = {
+	var data1_1:Dynamic;
+	var data1_2:Dynamic;
+	var data1_3:Dynamic;
+	//var ?data1_4:Dynamic; //未支持optional
+}
+typedef SecondData = {
+	var data2_1:Dynamic;
+	var data2_2:Dynamic;
+	var data2_3:Dynamic;
+}
+typedef InfData = FirstData & SecondData;
+
+typedef FinalData = {
+	> FirstData,
+	> SecondData,
+	var dataFinal:Dynamic;
+}
+
+var hhs:HHSample = new HHSample();
+hhs.inputContent(50);
+hhs.working();
+trace("Working Result: " + hhs.output);
+
+enum EnumMath {
+	ZERO;
+	ONE;
+	TWO;
+	THREE;
+	FOUR;
+	FIVE;
+	SIX;
+	SEVEN;
+	EIGHT;
+	NINE;
+	COMPLEX(c:Int);
+}
+
+var compare = EnumMath.ZERO;
+for(enu in [EnumMath.ZERO, EnumMath.ONE, EnumMath.TWO, EnumMath.THREE]) {
+	trace("EnumMath." + enu.getEnumName() + " == " + "EnumMath." + compare.getEnumName() + ": " + (enu == compare));
+}
+
+var compare1 = EnumMath.COMPLEX(12);
+for(count in 10...14) {
+	var i = EnumMath.COMPLEX(count);
+	Sys.println("");
+	trace("EnumMath." + compare1.toString() + " == " + "EnumMath." + i.toString() + ": " + (compare1 == i));
+	trace("Type.enumEq(EnumMath." + compare1.toString() + ", " + "EnumMath." + i.toString() + "): " + (Type.enumEq(compare1, i)));
+	Sys.println("");
+}

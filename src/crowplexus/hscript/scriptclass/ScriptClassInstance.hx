@@ -1,0 +1,333 @@
+package crowplexus.hscript.scriptclass;
+
+import crowplexus.hscript.Interp;
+import crowplexus.hscript.Expr;
+import crowplexus.iris.Iris;
+
+@:allow(crowplexus.hscript.scriptclass.ScriptClassInterp)
+class ScriptClassInstance extends BaseScriptClass {
+	public var name:String;
+	public var extend:String;
+	public var superClass:Dynamic;
+
+	private var constructorArgs:Array<Dynamic>;
+	var __ogInterp:Interp;
+	var __interp:Interp;
+	var fields:Array<BydFieldDecl>;
+	var overrides:Array<String> = [];
+	var constructor:BydFieldDecl;
+	var urDad:ScriptClass;
+
+	private function new(ogInterp:Interp, name:String, extend:String, fields:Array<BydFieldDecl>, constructor:BydFieldDecl, parent:ScriptClass, ?constructorArgs:Array<Dynamic>) {
+		this.name = name;
+		this.extend = extend;
+		this.fields = fields;
+		this.constructor = constructor;
+		this.urDad = parent;
+		this.constructorArgs = constructorArgs;
+		__ogInterp = ogInterp;
+
+		__interp = new ScriptClassInterp(this);
+		syncParent(__interp);
+		resolveSuperClass();
+		parseConstructor();
+		parseInstanceField();
+		callConstructor();
+	}
+
+	public inline function superExistsFunction(f:String):Bool {
+		return cacheSuperFieldsName.contains("__SC_SUPER_" + f);
+	}
+
+	public override function sc_exists(name:String):Bool {
+		@:privateAccess return (superClass != null && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("get_" + name))) || __interp.propertyLinks.get(name) != null || __interp.directorFields.get(name) != null || __interp.variables.exists(name);
+	}
+
+	public override function sc_get(name:String):Dynamic {
+		@:privateAccess {
+			if(superClass != null) {
+				if(!overrides.contains(name) && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("get_" + name))) {
+					return Reflect.getProperty(this.superClass, name);
+				}
+			}
+
+			if (__interp.propertyLinks.get(name) != null) {
+			var l = __interp.propertyLinks.get(name);
+				if (l.inState)
+					return l.get(name);
+				else
+					return l.link_getFunc();
+			}
+
+			if (__interp.directorFields.get(name) != null)
+				return __interp.directorFields.get(name).value;
+
+			if (__interp.variables.exists(name)) {
+				var v = __interp.variables.get(name);
+				return v;
+			}
+
+			__ogInterp.error(EUnknownVariable(name));
+			return null;
+		}
+	}
+
+	public override function sc_set(name:String, value:Dynamic) {
+		@:privateAccess {
+			if(superClass != null) {
+				if(!overrides.contains(name) && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("set_" + name))) {
+					Reflect.setProperty(this.superClass, name, value);
+					return;
+				}
+			}
+
+			if (__interp.propertyLinks.get(name) != null) {
+				var l = __interp.propertyLinks.get(name);
+				if (l.inState)
+					l.set(name, value);
+				else
+					l.link_setFunc(value);
+				return;
+			}
+
+			if(__interp.directorFields.get(name) != null) {
+				var l = __interp.directorFields.get(name);
+				if(l.const) {
+					__interp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+				} else if(l.type == "func") {
+					__interp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
+				} else if(l.isInline) {
+					__interp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
+				} else {
+					l.value = value;
+				}
+			} else
+				__interp.variables.set(name, value);
+		}
+	}
+
+	public override function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
+		if(superClass != null && overrides.contains(name)) {
+			var l = __interp.directorFields.get(name);
+			if(l != null && l.type == "func") {
+				return Reflect.callMethod(null, l.value, args ?? []);
+			}
+		}
+
+		if(Reflect.isFunction(sc_get(name)))
+			return Reflect.callMethod(null, sc_get(name), args ?? []);
+		return null;
+	}
+
+	private function callConstructor() {
+		@:privateAccess 
+		if(sc_exists("new")) {
+			this.sc_call("new", this.constructorArgs);
+			if(needExtend()) {
+				if(this.superClass == null) __ogInterp.error(ECustom("Missing 'super()' Called"));
+			}
+		} else if(needExtend()) {
+			createSuperClassInstance(this.constructorArgs);
+		}
+	}
+
+	private function resolveSuperClass() {
+		cacheSuperClassField();
+		@:privateAccess
+		if(needExtend()) {
+			var cls = __interp.imports.get(extend);
+
+			for(field in fields) {
+				if(field != null && field.access.contains(AOverride)) {
+					if(!cacheSuperFieldsName.contains(field.name)) __ogInterp.error(ECustom("Cannot not override this field as Script Class '" + name + "' Super Class has not the field -> '" + field.name + "'"));
+					if(field.kind.match(KFunction(_))) {
+						this.overrides.push(field.name);
+					} else __ogInterp.error(ECustom("Unexpected this field '" + field.name + "' as 'override' only applies to function"));
+				}
+			}
+		} else if(extend != null && __interp.imports.get(extend) == null) {
+			__ogInterp.error(ECustom("Invalid Extended Class -> '" + extend + "'"));
+		}
+	}
+
+	private var cacheSuperFieldsName:Array<String> = [];
+	inline function cacheSuperClassField() {
+		if(needExtend()) {
+			var cls:Class<Dynamic> = cast __interp.imports.get(this.extend);
+			cacheSuperFieldsName = Type.getInstanceFields(cls);
+		}
+	}
+
+	private inline function needExtend():Bool {
+		return this.extend != null && (this.__interp.imports.get(this.extend) is Class);
+	}
+
+	function parseInstanceField() {
+		for(field in this.fields) {
+			@:privateAccess
+			if(field != null)
+				switch(field.kind) {
+					case KVar(decl):
+						__interp.directorFields.set(field.name, {
+							value: parseValDecl(decl),
+							type: "var",
+							const: decl.isConst,
+							isInline: field.access.contains(AInline)
+						});
+						if((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
+							if(decl.get == "get" && Lambda.find(this.fields, (f) -> f.name == ("get_" + field.name) && !field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
+								__ogInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
+							if(decl.set == "set" && Lambda.find(this.fields, (f) -> f.name == ("set_" + field.name) && !f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
+								__ogInterp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
+							__interp.propertyLinks.set(field.name, new PropertyAccessor(__interp, () -> {
+								final n = field.name;
+								if (__interp.directorFields.get(n) != null)
+									return __interp.directorFields.get(n).value;
+								else
+									throw __ogInterp.error(EUnknownVariable(n));
+								return null;
+							}, (val) -> {
+								final n = field.name;
+								if (__interp.directorFields.get(n) != null)
+									__interp.directorFields.get(n).value = val;
+								else
+									throw __ogInterp.error(EUnknownVariable(n));
+								return val;
+							}, decl.get ?? "default", decl.set ?? "default"));
+						}
+					case KFunction(decl):
+						__interp.directorFields.set(field.name, {
+							value: parseFuncDecl(decl, field.name),
+							type: "func",
+							const: true,
+							isInline: field.access.contains(AInline)
+						});
+				}
+		}
+	}
+
+	inline function sureScriptedClass():Bool {
+		return cacheSuperFieldsName.contains("__sc_standClass");
+	}
+
+	function parseConstructor() {
+		@:privateAccess if(this.constructor != null) {
+			final field = this.constructor;
+			__interp.expr(field.pos);
+			switch(field.kind) {
+				case KFunction(decl):
+					__interp.directorFields.set(field.name, {
+						value: parseFuncDecl(decl, field.name),
+						type: "func",
+						const: true,
+						isInline: field.access.contains(AInline)
+					});
+				case _:
+			}
+		} else if(!needExtend()) {
+			trace("aha");
+			__ogInterp.error(ECustom("ScriptClass '" + name + "' has not constructor."));
+			trace("aha");
+		}
+	}
+
+	private function syncParent(s:Interp) {
+		@:privateAccess s.imports = __ogInterp.imports;
+		s.variables.set("trace", __ogInterp.variables.get("trace"));
+	}
+
+	private function parseValDecl(decl:VarDecl) {
+		@:privateAccess
+		return if(decl.expr == null) {
+			null;
+		} else {
+			__interp.exprReturn(decl.expr);
+		}
+	}
+
+	private function parseFuncDecl(decl:FunctionDecl, name:String) {
+		@:privateAccess {
+			var capturedLocals = __interp.duplicate(__interp.locals);
+			if(decl.args == null) decl.args = [];
+			var minParams = decl.args.length;
+			var paramDefs = [];
+			for(param in decl.args) {
+				if(param.opt || param.value != null) minParams--;
+				if(param.value != null) {
+					paramDefs.push({
+						__interp.exprReturn(param.value);
+					});
+				} else paramDefs.push(null);
+			}
+			var func = function(args:Array<Dynamic>) {
+					if(args.length < minParams) {
+						__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
+					}
+
+					// make sure mandatory args are forced
+					var args2 = [];
+					var extraParams = args.length - minParams;
+					var pos = 0;
+					for (index=>p in decl.args) {
+						if (p.opt) {
+							if (extraParams > 0) {
+								if(args[pos] == null && paramDefs[index] != null)
+									args2.push(paramDefs[index]);
+								else args2.push(args[pos]);
+								extraParams--;
+								pos++;
+							} else
+								args2.push(paramDefs[index]);
+						} else {
+							if(args[pos] == null && paramDefs[index] != null)
+								args2.push(paramDefs[index]);
+							else args2.push(args[pos]);
+							pos++;
+						}
+					}
+					args = args2;
+					var old = __interp.locals, depth = __interp.depth;
+					__interp.depth++;
+					__interp.locals = __interp.duplicate(capturedLocals);
+					for (i in 0...decl.args.length)
+						__interp.locals.set(decl.args[i].name, {r: args[i], const: false});
+
+					var r = null;
+					var oldDecl = __interp.declared.length;
+					if (__interp.inTry)
+						try {
+							if(name != null) __interp.inFunction = name;
+							else __interp.inFunction = '(Invalid Function Name.)';
+							r = __interp.exprReturn(decl.expr, false);
+							__interp.inFunction = null;
+						} catch (e:Dynamic) {
+							__interp.inFunction = null;
+							__interp.locals = old;
+							__interp.depth = depth;
+							#if neko
+							neko.Lib.rethrow(e);
+							#else
+							throw e;
+							#end
+						}
+					else {
+						if(name != null) __interp.inFunction = name;
+						else __interp.inFunction = '(Invalid Function Name.)';
+						r = __interp.exprReturn(decl.expr, false);
+						__interp.inFunction = null;
+					}
+					__interp.restore(oldDecl);
+					__interp.locals = old;
+					__interp.depth = depth;
+					return r;
+			};
+			return Reflect.makeVarArgs(func);
+		}
+	}
+
+	private function createSuperClassInstance(args:Array<Dynamic>) {
+		var cls:Class<Dynamic> = cast __interp.imports.get(this.extend);
+		if(sureScriptedClass()) Type.createInstance(cls, [cast this].concat(args));
+		else this.superClass = Type.createInstance(cls, args);
+	}
+}

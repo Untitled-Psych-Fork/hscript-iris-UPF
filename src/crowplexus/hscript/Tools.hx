@@ -23,6 +23,7 @@
 package crowplexus.hscript;
 
 import crowplexus.hscript.Expr;
+import crowplexus.hscript.proxy.ProxyType;
 
 class Tools {
 	public static function iter(e: Expr, f: Expr->Void) {
@@ -172,10 +173,10 @@ class Tools {
 	}
 
 	public static function getClass(name: String): Dynamic {
-		var c: Dynamic = Type.resolveClass(name);
+		var c: Dynamic = ProxyType.resolveClass(name);
 		if (c == null) // try importing as enum
 			try
-				c = Type.resolveEnum(name);
+				c = ProxyType.resolveEnum(name);
 
 		if (c == null) {
 			// lastly try removing any inner class from it
@@ -184,9 +185,9 @@ class Tools {
 			// without the script crashing immediately
 			var className = removeInnerClass(name);
 			if (className != name) {
-				c = Type.resolveClass(className);
+				c = ProxyType.resolveClass(className);
 				if (c == null)
-					c = Type.resolveEnum(className);
+					c = ProxyType.resolveEnum(className);
 			}
 		}
 		return c;

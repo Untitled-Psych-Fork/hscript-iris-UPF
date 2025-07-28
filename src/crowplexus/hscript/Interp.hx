@@ -22,6 +22,7 @@
 
 package crowplexus.hscript;
 
+import crowplexus.hscript.proxy.ProxyType;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
@@ -58,6 +59,7 @@ class DeclaredVar {
 }
 
 @:allow(crowplexus.hscript.PropertyAccessor)
+@:allow(crowplexus.hscript.scriptclass.ScriptClassInterp)
 class Interp {
 	/**
 	 * 还是觉得直接包装成静态更好一点（不模仿）
@@ -67,6 +69,67 @@ class Interp {
 		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
 		return null;
 	}
+
+	private static var scriptClasses:#if haxe3 Map<String, crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
+	private static var scriptEnums:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+
+	/**
+	 * 指定script class是否存在
+	 * @param path		指定script class路径
+	 */
+	public static inline function existsScriptClass(path:String):Bool {
+		return scriptClasses.exists(path);
+	}
+	/**
+	 * 通过路径获取script class
+	 * @param path		指定script class路径
+	 */
+	public static function resolveScriptClass(path:String):crowplexus.hscript.scriptclass.ScriptClass {
+		if(scriptClasses.exists(path)) {
+			return scriptClasses.get(path);
+		}
+
+		throw "Invalid class path -> " + path;
+		return null;
+	}
+
+	/**
+	 * 指定script enum是否存在
+	 * @param path		指定script enum路径
+	 */
+	public static inline function existsScriptEnum(path:String):Bool {
+		return scriptEnums.exists(path);
+	}
+	/**
+	 * 通过路径获取script enum
+	 * @param path		指定script enum路径
+	 */
+	public static function resolveScriptEnum(path:String):Dynamic {
+		if(scriptEnums.exists(path)) {
+			return scriptEnums.get(path);
+		}
+
+		throw "Invalid enum path -> " + path;
+		return null;
+	}
+
+	/**
+	 * 清除已捕获的静态变量、script class、script enum
+	 */
+	public static function clearCache():Void {
+		staticVariables = #if haxe3 new Map() #else new Hash() #end;
+		scriptClasses = #if haxe3 new Map() #else new Hash() #end;
+		scriptEnums = #if haxe3 new Map() #else new Hash() #end;
+	}
+
+	/**
+	 * 用于限制script class的创建
+	 */
+	public var allowScriptClass:Bool;
+	/**
+	 * 用于限制script enum的创建
+	 */
+	public var allowScriptEnum:Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -88,7 +151,7 @@ class Interp {
 	#end
 
 	/**
-	 * 反狼偷家
+	 * 我不知道这是什么
 	 */
 	public var parentInstance(default, set): Dynamic;
 
@@ -117,11 +180,15 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
+	@:noCompletion var inFunction:Null<String>;
+	var callTP:Bool;
+	var fieldDotRet:Array<String> = [];
+
 	#if hscriptPos
 	var curExpr: Expr;
 	#end
 
-	public var showPosOnLog: Bool = true;
+	public var showPosOnLog: Bool = false;
 
 	public function new() {
 		#if haxe3
@@ -213,7 +280,7 @@ class Interp {
 		assignOp("??" + "=", function(v1, v2) return v1 == null ? v2 : v1);
 	}
 
-	public inline function setVar(name: String, v: Dynamic) {
+	public function setVar(name: String, v: Dynamic) {
 		if (propertyLinks.get(name) != null) {
 			var l = propertyLinks.get(name);
 			if (l.inState)
@@ -277,7 +344,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
+				fieldDotRet.push(f);
 				var e = expr(e);
+				fieldDotRet.pop();
 				if (e == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -319,7 +388,9 @@ class Interp {
 						warn(ECustom("Cannot reassign final, for constant expression -> " + id));
 				}
 			case EField(e, f, s):
+				fieldDotRet.push(f);
 				var obj = expr(e);
+				fieldDotRet.pop();
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -371,7 +442,9 @@ class Interp {
 				}
 				return v;
 			case EField(e, f, s):
+				fieldDotRet.push(f);
 				var obj = expr(e);
+				fieldDotRet.pop();
 				if (obj == null)
 					if (!s)
 						error(EInvalidAccess(f));
@@ -460,6 +533,8 @@ class Interp {
 	}
 
 	inline function error(e: #if hscriptPos ErrorDef #else Error #end, rethrow = false): Dynamic {
+		fieldDotRet = [];
+		callTP = false;
 		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, curExpr.origin, curExpr.line); #end
 		if (rethrow)
 			this.rethrow(e)
@@ -568,6 +643,12 @@ class Interp {
 							}
 						}
 						s;
+					case CEReg(i, opt):
+						new EReg(i, (opt != null ? opt : ""));
+					case CSuper:
+						if(fieldDotRet.length > 0) error(ECustom("Normal variables cannot be accessed with 'super', use 'this' instead"));
+						else error(ECustom("Cannot use super as value"));
+						null;
 					#if !haxe3
 					case CInt32(v): v;
 					#end
@@ -575,7 +656,13 @@ class Interp {
 			case EIdent(id):
 				if(id == "false" && id == "true" && id == "null")
 					return variables.get(id);
-				return resolve(id);
+				final re = resolve(id);
+				//这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
+				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if(cls.superClass != null) return cls.superClass;
+				}
+				return re;
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
 				if (getter == null)
 					getter = "default";
@@ -650,12 +737,17 @@ class Interp {
 				restore(old);
 				return v;
 			case EField(e, f, true):
+				fieldDotRet.push(f);
 				var e = expr(e);
+				fieldDotRet.pop();
 				if (e == null)
 					return null;
 				return get(e, f);
 			case EField(e, f, false):
-				return get(expr(e), f);
+				fieldDotRet.push(f);
+				var re = expr(e);
+				fieldDotRet.pop();
+				return get(re, f);
 			case EBinop(op, e1, e2):
 				var fop = binops.get(op);
 				if (fop == null)
@@ -686,16 +778,24 @@ class Interp {
 				for (p in params)
 					args.push(expr(p));
 
+				callTP = true;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
+						if(Tools.expr(e).match(EConst(CSuper)))
+							return super_field_call(f, args);
+						fieldDotRet.push(f);
 						var obj = expr(e);
+						fieldDotRet.pop();
 						if (obj == null)
 							if (!s)
 								error(EInvalidAccess(f));
 						return fcall(obj, f, args);
+					case EConst(CSuper):
+						return super_call(args);
 					default:
 						return call(null, expr(e), args);
 				}
+				callTP = false;
 			case EIf(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else if (e2 == null) null else expr(e2);
 			case EWhile(econd, e):
@@ -796,8 +896,9 @@ class Interp {
 							throw e;
 							#end
 						}
-					else
+					else {
 						r = me.exprReturn(fexpr, false);
+					}
 					restore(oldDecl);
 					me.locals = old;
 					me.depth = depth;
@@ -876,13 +977,16 @@ class Interp {
 				} else {
 					return arr[index];
 				}
-			case EEReg(i, opt):
-				return new EReg(i, (opt != null ? opt : ""));
 			case ENew(cl, params):
 				var a = new Array();
 				for (e in params)
 					a.push(expr(e));
-				return cnew(cl, a);
+				var re = cnew(cl, a);
+				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if(cls.superClass != null) return cls.superClass;
+				}
+				return re;
 			case EThrow(e):
 				throw expr(e);
 			case ETry(e, n, _, ecatch):
@@ -936,7 +1040,29 @@ class Interp {
 				return expr(e);
 			case ECheckType(e, _):
 				return expr(e);
-			case EEnum(enumName, fields):
+			case EClass(clName, exName, imName, fields, pkg):
+				if(!allowScriptClass) {
+					warn(ECustom("Cannot create class because it is not supported"));
+					return null;
+				}
+				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + clName : clName);
+				if(!scriptClasses.exists(fullPath)) {
+					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
+					scriptClasses.set(cl.fullPath, cl);
+					imports.set(clName, cl);
+				} else {
+					warn(ECustom("Cannot create class with the same name, it already exists"));
+				}
+			case EEnum(enumName, fields, pkg):
+				if(!this.allowScriptEnum) {
+					warn(ECustom("Cannot create enum because it is not supported"));
+					return null;
+				}
+				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + enumName : enumName);
+				if(scriptEnums.exists(fullPath)) {
+					warn(ECustom("Cannot create enum with the same name, it already exists"));
+					return null;
+				}
 				var obj = {};
 				for (index => field in fields) {
 					switch (field) {
@@ -979,13 +1105,23 @@ class Interp {
 							Reflect.setField(obj, name, f);
 					}
 				}
-
-				variables.set(enumName, obj);
+				scriptEnums.set(fullPath, obj);
+				imports.set(enumName, obj);
 			case EDirectValue(value):
 				return value;
 			case EUsing(name):
 				useUsing(name);
 		}
+		return null;
+	}
+
+	function super_call(args:Array<Dynamic>):Dynamic {
+		error(ECustom("invalid super()"));
+		return null;
+	}
+
+	function super_field_call(field:String, args:Array<Dynamic>):Dynamic {
+		error(ECustom("invalid super." + field + "()"));
 		return null;
 	}
 
@@ -1077,6 +1213,9 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		}
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -1094,6 +1233,12 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+
+		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
+			return v;
+		}
+
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
@@ -1217,9 +1362,10 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
-		var c = Type.resolveClass(cl);
+		var c:Null<Dynamic> = ProxyType.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
-		return Type.createInstance(c, args);
+		if(c == null) error(ECustom("Cannot Create Instance By '" + cl + "', Invlalid Class."));
+		return ProxyType.createInstance(c, args);
 	}
 }

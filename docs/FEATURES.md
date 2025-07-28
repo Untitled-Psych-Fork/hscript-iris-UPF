@@ -26,16 +26,10 @@
 
 - [x] Parent (Used in `Interp.parentInstance`)
 
-- [x] Getter & Setter (@see [Props-Testing](../tests/assets/props_test.hx))
+- [x] Getter & Setter
 
-- [x] staticModifier (@see [Static-Testing1](../tests/assets/static_test1.hx) & [Static-Testing](../tests/assets/static_test2.hx))
+- [x] staticModifier
+
+- [x] Classes
 
 - [x] String Interpolation (It Still has some trouble. If you need to use it. Please Used in `Parser.allowInterpolation`)
-
----
-
-## TODO:
-
-- [ ] Classes?
-
----

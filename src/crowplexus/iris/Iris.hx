@@ -2,6 +2,7 @@ package crowplexus.iris;
 
 import crowplexus.iris.utils.Ansi;
 import crowplexus.hscript.proxy.ProxyType;
+import crowplexus.hscript.proxy.ProxyReflect;
 import haxe.ds.StringMap;
 import crowplexus.hscript.*;
 import crowplexus.hscript.Expr;
@@ -83,7 +84,10 @@ class Iris {
 	/**
 	 * Contains proxies for classes. So they can be sandboxed or add extra functionality.
 	**/
-	@:unreflective public static var proxyImports: Map<String, Dynamic> = ["Type" => ProxyType];
+	@:unreflective public static var proxyImports: Map<String, Dynamic> = [
+		"Type" => ProxyType,
+		"Reflect" => ProxyReflect
+		];
 
 	public static function addBlocklistImport(name: String): Void {
 		blocklistImports.push(name);
@@ -234,6 +238,8 @@ class Iris {
 		parser = new Parser();
 		interp = new Interp();
 		interp.showPosOnLog = false;
+		interp.allowScriptEnum = this.config.allowEnum;
+		interp.allowScriptClass = this.config.allowClass;
 
 		parser.allowTypes = true;
 		parser.allowMetadata = true;
