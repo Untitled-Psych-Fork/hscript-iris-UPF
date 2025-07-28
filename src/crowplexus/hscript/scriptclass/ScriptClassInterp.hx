@@ -5,9 +5,9 @@ import crowplexus.iris.Iris;
 
 @:access(crowplexus.hscript.Interp)
 class ScriptClassInterp extends Interp {
-	var scriptClass:ScriptClassInstance;
+	var scriptClass: ScriptClassInstance;
 
-	public function new(scriptClass:ScriptClassInstance) {
+	public function new(scriptClass: ScriptClassInstance) {
 		super();
 		this.scriptClass = scriptClass;
 		this.variables.set("this", scriptClass);
@@ -17,8 +17,8 @@ class ScriptClassInterp extends Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
-		//我傻逼
-		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+		// 我傻逼
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
 			return v;
 		}
@@ -30,12 +30,12 @@ class ScriptClassInterp extends Interp {
 	override function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if(o is IScriptedClass) {
-			if(scriptClass.superExistsFunction(f)) {
+		if (o is IScriptedClass) {
+			if (scriptClass.superExistsFunction(f)) {
 				return Reflect.getProperty(o, "__SC_SUPER_" + f);
 			}
 		}
-		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
 			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
 		}
 		return {
@@ -62,31 +62,31 @@ class ScriptClassInterp extends Interp {
 			return;
 		}
 
-		if(directorFields.get(name) != null) {
+		if (directorFields.get(name) != null) {
 			var l = directorFields.get(name);
-			if(l.const) {
+			if (l.const) {
 				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-			} else if(l.type == "func") {
+			} else if (l.type == "func") {
 				warn(ECustom("Cannot reassign function, for constant expression -> " + name));
-			} else if(l.isInline) {
+			} else if (l.isInline) {
 				warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 			} else {
 				l.value = v;
 			}
-		} else if(scriptClass.sc_exists(name)) {
+		} else if (scriptClass.sc_exists(name)) {
 			scriptClass.sc_set(name, v);
-		} else if(scriptClass.urDad.sc_exists(name)) {
+		} else if (scriptClass.urDad.sc_exists(name)) {
 			scriptClass.urDad.sc_set(name, v);
 		}
 		/*if (directorFields.exists(name)) {
-			directorFields.set(name, v);
-		} else if (directorFields.exists('$name;const')) {
-			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-		} else if (staticVariables.exists(name)) {
-			staticVariables.set(name, v);
-		} else if (staticVariables.exists('$name;const')) {
-			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-		} */
+				directorFields.set(name, v);
+			} else if (directorFields.exists('$name;const')) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+			} else if (staticVariables.exists(name)) {
+				staticVariables.set(name, v);
+			} else if (staticVariables.exists('$name;const')) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		}*/
 		else if (parentInstance != null) {
 			if (_parentFields.contains(name) || _parentFields.contains('set_$name')) {
 				Reflect.setProperty(parentInstance, name, v);
@@ -119,9 +119,9 @@ class ScriptClassInterp extends Interp {
 			return v;
 		}
 
-		if(this.scriptClass.sc_exists(id)) {
+		if (this.scriptClass.sc_exists(id)) {
 			return this.scriptClass.sc_get(id);
-		} else if(this.scriptClass.urDad.sc_exists(id)) {
+		} else if (this.scriptClass.urDad.sc_exists(id)) {
 			return this.scriptClass.urDad.sc_get(id);
 		}
 
@@ -156,23 +156,26 @@ class ScriptClassInterp extends Interp {
 		return null;
 	}
 
-	override function super_call(args:Array<Dynamic>):Dynamic {
-		if(scriptClass.needExtend())
+	override function super_call(args: Array<Dynamic>): Dynamic {
+		if (scriptClass.needExtend())
 			scriptClass.createSuperClassInstance(args);
-		else error(ECustom("Current class does not have a super"));
+		else
+			error(ECustom("Current class does not have a super"));
 		return null;
 	}
 
-	override function super_field_call(field:String, args:Array<Dynamic>):Dynamic {
-		if(scriptClass.superClass != null) {
-			if(scriptClass.superClass is IScriptedClass) {
-				if(scriptClass.superExistsFunction(field)) {
+	override function super_field_call(field: String, args: Array<Dynamic>): Dynamic {
+		if (scriptClass.superClass != null) {
+			if (scriptClass.superClass is IScriptedClass) {
+				if (scriptClass.superExistsFunction(field)) {
 					return call(null, Reflect.getProperty(scriptClass.superClass, "__SC_SUPER_" + field), args);
-				} else error(ECustom("Invalid Calling -> super." + field + "()"));
+				} else
+					error(ECustom("Invalid Calling -> super." + field + "()"));
 			} else {
 				return call(null, get(scriptClass.superClass, field), args);
 			}
-		} else error(ECustom("Current class does not have a super"));
+		} else
+			error(ECustom("Current class does not have a super"));
 		return null;
 	}
 }

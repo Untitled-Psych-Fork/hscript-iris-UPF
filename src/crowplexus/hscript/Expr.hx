@@ -27,9 +27,9 @@ import crowplexus.hscript.Types.ByteUInt;
 enum Const {
 	CInt(v: Int);
 	CFloat(f: Float);
-	CString(s: String, ?sm: Array<{var e:Expr; var pos:Int;}>);
+	CString(s: String, ?sm: Array < {var e: Expr; var pos: Int;} >);
 	CSuper;
-	CEReg(r:String, ?opt:String);
+	CEReg(r: String, ?opt: String);
 	#if !haxe3
 	CInt32(v:haxe.Int32);
 	#end
@@ -206,7 +206,7 @@ typedef TypeDecl = {
 
 typedef BydFieldDecl = {
 	> FieldDecl,
-	var pos:Expr;
+	var pos: Expr;
 }
 
 typedef FieldDecl = {

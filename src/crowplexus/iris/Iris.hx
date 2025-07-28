@@ -84,10 +84,7 @@ class Iris {
 	/**
 	 * Contains proxies for classes. So they can be sandboxed or add extra functionality.
 	**/
-	@:unreflective public static var proxyImports: Map<String, Dynamic> = [
-		"Type" => ProxyType,
-		"Reflect" => ProxyReflect
-		];
+	@:unreflective public static var proxyImports: Map<String, Dynamic> = ["Type" => ProxyType, "Reflect" => ProxyReflect];
 
 	public static function addBlocklistImport(name: String): Void {
 		blocklistImports.push(name);
@@ -278,8 +275,10 @@ class Iris {
 		Iris.instances.set(this.name, this);
 		this.config.packageName = parser.packageName;
 		return try {
-			if (expr != null) interp.execute(expr);
-			else null;
+			if (expr != null)
+				interp.execute(expr);
+			else
+				null;
 		#if hscriptPos
 		} catch (e:Error) {
 			Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: e.line});

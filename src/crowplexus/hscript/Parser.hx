@@ -122,8 +122,8 @@ class Parser {
 	var abductCount: Int = 0;
 	var abducts = ["if", "for", "while", "try", "switch", "do"];
 	@:noCompletion var sureStaticModifier: Bool = false;
-	@:noCompletion var interpolationState:Bool = false;
-	@:noCompletion var lastInjectors:Array<String>;
+	@:noCompletion var interpolationState: Bool = false;
+	@:noCompletion var lastInjectors: Array<String>;
 	var compatibles: Array<Bool> = [];
 
 	#if hscriptPos
@@ -424,7 +424,7 @@ class Parser {
 		return parseExprNext(mk(EObject(fl), p1));
 	}
 
-	function automaticAbduct(condition:Bool, func:haxe.Constraints.Function, ?args:Array<Dynamic>) {
+	function automaticAbduct(condition: Bool, func: haxe.Constraints.Function, ?args: Array<Dynamic>) {
 		var ttime = compatibles.length;
 		if (condition) {
 			compatibles.push(true);
@@ -454,7 +454,7 @@ class Parser {
 				return parseExprNext(mk(EConst(c)));
 			case TRegex(i, opt):
 				if (opt != null) {
-					if (opt != "i" && opt != "g" && opt != "m" #if (!cs && !js) && opt != "s" #end #if (cpp || neko) && opt != "u" #end) {
+					if (opt != "i" && opt != "g" && opt != "m" #if (!cs && !js) && opt != "s" #end#if (cpp || neko) && opt != "u" #end) {
 						error(ECustom(opt + " is not a matching symbol for EReg"), tokenMin, tokenMax);
 					}
 				}
@@ -684,7 +684,7 @@ class Parser {
 		}
 	}
 
-	function parseStructure(id, ?tt:Token) {
+	function parseStructure(id, ?tt: Token) {
 		#if hscriptPos
 		var p1 = tokenMin;
 		#end
@@ -710,14 +710,19 @@ class Parser {
 						push(TSemicolon);
 				}
 				mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenMax : pmax(e2));
-			case id if(modifierContainer.contains(id)):
-				if(abductCount != 0) unexpected(tt);
-				if(tt != null) push(tt);
-				else push(TId(id));
+			case id if (modifierContainer.contains(id)):
+				if (abductCount != 0)
+					unexpected(tt);
+				if (tt != null)
+					push(tt);
+				else
+					push(TId(id));
 				injectorModifier();
 			case "var", "final":
-				if(tt != null) push(tt);
-				else push(TId(id));
+				if (tt != null)
+					push(tt);
+				else
+					push(TId(id));
 				injectorModifier();
 			case "while":
 				var econd = parseExpr();
@@ -744,8 +749,10 @@ class Parser {
 			case "continue": mk(EContinue);
 			case "else": unexpected(TId(id));
 			case "function":
-				if(tt != null) push(tt);
-				else push(TId(id));
+				if (tt != null)
+					push(tt);
+				else
+					push(TId(id));
 				injectorModifier();
 			case "return":
 				var tk = token();
@@ -874,8 +881,9 @@ class Parser {
 				}
 				mk(ESwitch(parentExpr, cases, def), p1, tokenMax);
 			case "import":
-				//no need settup in local.
-				if(abductCount > 0) unexpected(TId(id));
+				// no need settup in local.
+				if (abductCount > 0)
+					unexpected(TId(id));
 				var path = [getIdent()];
 				var asStr: String = null;
 				var star: Bool = false;
@@ -913,41 +921,43 @@ class Parser {
 				 */
 				mk(EImport(path.join('.'), asStr));
 			case "class":
-				if(abductCount > 0) unexpected(TId(id));
+				if (abductCount > 0)
+					unexpected(TId(id));
 
-				var className:String = '';
-				var extendedClassName:Null<String> = null;
-				var interfacesNames:Array<String> = [];
+				var className: String = '';
+				var extendedClassName: Null<String> = null;
+				var interfacesNames: Array<String> = [];
 				var t = token();
 
-				switch(t) {
+				switch (t) {
 					case TId(id):
-						if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) className = id;
-						else error(ECustom('Class Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
+						if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) className = id; else error(ECustom('Class Name "' + id +
+							'" Initial capital letters are required'), tokenMin, tokenMax);
 					case _:
 						unexpected(t);
 				}
 
-				if(maybe(TId("extends"))) {
+				if (maybe(TId("extends"))) {
 					t = token();
-					switch(t) {
+					switch (t) {
 						case TId(id):
-							if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) extendedClassName = id;
-							else error(ECustom('Extended Class Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
+							if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) extendedClassName = id; else error(ECustom('Extended Class Name "' + id
+								+ '" Initial capital letters are required'), tokenMin, tokenMax);
 						case _:
 							unexpected(t);
 					}
 				}
 
 				t = token();
-				while(Type.enumEq(t, TId("implements"))) {
+				while (Type.enumEq(t, TId("implements"))) {
 					var tk = token();
-					switch(tk) {
+					switch (tk) {
 						case TId(id):
-							if(~/^[A-Z][A-Za-z0-9_]*/.match(id)) {
-								if(!interfacesNames.contains(id))
+							if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) {
+								if (!interfacesNames.contains(id))
 									interfacesNames.push(id);
-								else error(ECustom('Cannot reuse an interface "' + id + '"'), tokenMin, tokenMax);
+								else
+									error(ECustom('Cannot reuse an interface "' + id + '"'), tokenMin, tokenMax);
 							} else error(ECustom('Interface Name "' + id + '" Initial capital letters are required'), tokenMin, tokenMax);
 						case _:
 							unexpected(tk);
@@ -958,9 +968,9 @@ class Parser {
 				push(t);
 				var fields = [];
 				ensure(TBrOpen);
-				while(true) {
+				while (true) {
 					t = token();
-					if(t == TBrClose) {
+					if (t == TBrClose) {
 						break;
 					}
 					push(t);
@@ -968,7 +978,8 @@ class Parser {
 				}
 				mk(EClass(className, extendedClassName, interfacesNames, fields, packageName?.split(".")));
 			case "enum":
-				if(abductCount > 0) unexpected(TId(id));
+				if (abductCount > 0)
+					unexpected(TId(id));
 				var name = getIdent();
 
 				ensure(TBrOpen);
@@ -1014,7 +1025,8 @@ class Parser {
 			case "super":
 				parseExprNext(mk(EConst(CSuper)));
 			case "typedef":
-				if(abductCount > 0) unexpected(TId(id));
+				if (abductCount > 0)
+					unexpected(TId(id));
 				// typedef Name = Type;
 
 				/*
@@ -1066,11 +1078,13 @@ class Parser {
 				}
 
 			case "using":
-				if(abductCount > 0) unexpected(TId(id));
+				if (abductCount > 0)
+					unexpected(TId(id));
 				var path = parsePath();
 				mk(EUsing(path.join(".")));
 			case "package":
-				if(abductCount > 0) unexpected(TId(id));
+				if (abductCount > 0)
+					unexpected(TId(id));
 				// ignore package
 				var tk = token();
 				push(tk);
@@ -1087,37 +1101,38 @@ class Parser {
 		}
 	}
 
-	var modifierContainer:Array<String> = ["private", "public", "inline", "static", "dynamic"];
-	private function injectorModifier(?injectors:Array<String>) {
+	var modifierContainer: Array<String> = ["private", "public", "inline", "static", "dynamic"];
+
+	private function injectorModifier(?injectors: Array<String>) {
 		var t = token();
-		return switch(t) {
-			case TId(id) if(modifierContainer.contains(id)):
-				if(injectors == null) injectors = [];
+		return switch (t) {
+			case TId(id) if (modifierContainer.contains(id)):
+				if (injectors == null)
+					injectors = [];
 				injectors.push(id);
-				while(true) {
+				while (true) {
 					var tk = token();
-					switch(tk) {
-						case TId(id) if(modifierContainer.contains(id)):
-							if(!injectors.contains(id) &&
-								!(injectors.contains("public") && id == "private") &&
-								!(injectors.contains("private") && id == "public") &&
-								!(injectors.contains("dynamic") && id == "inline") &&
-								!(injectors.contains("inline") && id == "dynamic")
-							) injectors.push(id);
-							else unexpected(tk);
+					switch (tk) {
+						case TId(id) if (modifierContainer.contains(id)):
+							if (!injectors.contains(id)
+								&& !(injectors.contains("public") && id == "private")
+								&& !(injectors.contains("private") && id == "public")
+								&& !(injectors.contains("dynamic") && id == "inline")
+								&& !(injectors.contains("inline") && id == "dynamic")) injectors.push(id); else unexpected(tk);
 						case _:
 							push(tk);
 							break;
 					}
 				}
 				injectorModifier(injectors);
-			case TId(id) if(id == "final" || id == "var"):
+			case TId(id) if (id == "final" || id == "var"):
 				var getter: String = "default";
 				var setter: String = "default";
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
-				if(injectors != null && injectors.contains("dynamic")) error(ECustom("Invalid accessor 'dynamic' for variable -> " + ident), tokenMin, tokenMax);
+				if (injectors != null && injectors.contains("dynamic"))
+					error(ECustom("Invalid accessor 'dynamic' for variable -> " + ident), tokenMin, tokenMax);
 				if (tk == TPOpen) {
 					if (!(injectors != null && injectors.contains("inline")) && abductCount == 0 && id == "var") {
 						var getter1: Null<String> = null;
@@ -1174,9 +1189,9 @@ class Parser {
 						push(tk);
 					return null;
 				}, [tk]);
-				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if(abductCount == 0 && injectors != null) injectors else null), tokenMin,
+				mk(EVar(ident, abductCount, t, e, getter, setter, (id == "final"), if (abductCount == 0 && injectors != null) injectors else null), tokenMin,
 					(e == null) ? tokenMax : pmax(e));
-			case TId(id) if(id == "function"):
+			case TId(id) if (id == "function"):
 				var tk = token();
 				var name = null;
 				switch (tk) {
@@ -1195,24 +1210,33 @@ class Parser {
 					abductCount--;
 				}
 
-				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if(abductCount == 0 && injectors != null) injectors else null), tokenMin, pmax(inf.body));
+				mk(EFunction(inf.args, inf.body, abductCount, name, inf.ret, if (abductCount == 0 && injectors != null) injectors else null), tokenMin,
+					pmax(inf.body));
 			case _:
 				unexpected(t);
 		}
 	}
 
-	private var modifiers:Array<String> = ["public", "static", "override", "private", "inline"];
-	function parseClassField(?injector:Array<String>, ?injectorMeta:Metadata):BydFieldDecl {
+	private var modifiers: Array<String> = ["public", "static", "override", "private", "inline"];
+
+	function parseClassField(?injector: Array<String>, ?injectorMeta: Metadata): BydFieldDecl {
 		var t = token();
-		return switch(t) {
+		return switch (t) {
 			case TMeta(name):
-				if(injector != null && injector.length > 0) unexpected(t);
-				if(injectorMeta == null) injectorMeta = [];
+				if (injector != null && injector.length > 0)
+					unexpected(t);
+				if (injectorMeta == null)
+					injectorMeta = [];
 				injectorMeta.push({name: name, params: parseMetaArgs()});
 				parseClassField(injector, injectorMeta);
-			case TId(id) if(modifiers.contains(id)):
-				if(injector != null) {
-					if(injector.contains(id) || (id == "public" && injector.contains("private")) || (id == "private" && injector.contains("public") || (id == "override" && injector.contains("static")) || (id == "static" && injector.contains("override")))) {
+			case TId(id) if (modifiers.contains(id)):
+				if (injector != null) {
+					if (injector.contains(id)
+						|| (id == "public" && injector.contains("private"))
+						|| (id == "private"
+							&& injector.contains("public")
+							|| (id == "override" && injector.contains("static"))
+							|| (id == "static" && injector.contains("override")))) {
 						unexpected(t);
 					}
 					injector.push(id);
@@ -1222,7 +1246,7 @@ class Parser {
 					another.push(id);
 					parseClassField(another, injectorMeta);
 				}
-			case TId(id) if(id == "var" || id == "final"):
+			case TId(id) if (id == "var" || id == "final"):
 				var getter: String = "default";
 				var setter: String = "default";
 				var ident = getIdent();
@@ -1297,23 +1321,24 @@ class Parser {
 						isConst: (id == "final")
 					}),
 					access: {
-						final real:Array<FieldAccess> = [];
-						if(injector != null) for(ac in injector)
-							switch(ac) {
-								case "public": real.push(APublic);
-								case "private": real.push(APrivate);
-								case "inline": real.push(AInline);
-								case "static": real.push(AStatic);
-								case "override": real.push(AOverride);
-								case _:
-							}
+						final real: Array<FieldAccess> = [];
+						if (injector != null)
+							for (ac in injector)
+								switch (ac) {
+									case "public": real.push(APublic);
+									case "private": real.push(APrivate);
+									case "inline": real.push(AInline);
+									case "static": real.push(AStatic);
+									case "override": real.push(AOverride);
+									case _:
+								}
 						real;
 					},
 					pos: pos
 				};
-			case TId(id) if(id == "function"):
+			case TId(id) if (id == "function"):
 				var name = getIdent();
-				//trace(injector + "; " + "function: " + name);
+				// trace(injector + "; " + "function: " + name);
 				ensure(TPOpen);
 				var args = parseFunctionArgs();
 				var ret = null;
@@ -1336,16 +1361,17 @@ class Parser {
 						ret: ret
 					}),
 					access: {
-						final real:Array<FieldAccess> = [];
-						if(injector != null) for(ac in injector)
-							switch(ac) {
-								case "public": real.push(APublic);
-								case "private": real.push(APrivate);
-								case "inline": real.push(AInline);
-								case "static": real.push(AStatic);
-								case "override": real.push(AOverride);
-								case _:
-							}
+						final real: Array<FieldAccess> = [];
+						if (injector != null)
+							for (ac in injector)
+								switch (ac) {
+									case "public": real.push(APublic);
+									case "private": real.push(APrivate);
+									case "inline": real.push(AInline);
+									case "static": real.push(AStatic);
+									case "override": real.push(AOverride);
+									case _:
+								}
 						real;
 					},
 					pos: pos
@@ -1884,7 +1910,7 @@ class Parser {
 	}
 
 	function readString(until) {
-		var pos:Int = 0;
+		var pos: Int = 0;
 		var c = 0;
 		var b = new StringBuf();
 		var esc = false;
@@ -1903,13 +1929,13 @@ class Parser {
 				break;
 			}
 			#if haxe4
-			if(im) {
+			if (im) {
 				im = false;
-				switch(c) {
+				switch (c) {
 					case 36:
 						b.addChar(c);
 						pos++;
-					case char if(char == 123):
+					case char if (char == 123):
 						var a = [];
 						while (true) {
 							var t = token();
@@ -1932,15 +1958,15 @@ class Parser {
 							abductCount--;
 						}
 						es.push({e: mk(EBlock(a)), pos: pos});
-					case char if(idents[char]):
+					case char if (idents[char]):
 						var cnst = "";
-						while(idents[c] == true) {
+						while (idents[c] == true) {
 							cnst += String.fromCharCode(c);
 							c = readChar();
 						}
 						var oldPos = readPos;
 						es.push({e: mk(EIdent(cnst)), pos: pos});
-						//trace(es[es.length - 1]);
+						// trace(es[es.length - 1]);
 						readPos--;
 					case _:
 						b.addChar(36);
@@ -1971,8 +1997,7 @@ class Parser {
 						if (allowJSON) {
 							b.addChar(c);
 							pos++;
-						}
-						else
+						} else
 							invalidChar(c);
 					case "u".code:
 						if (!allowJSON)
@@ -2005,7 +2030,7 @@ class Parser {
 				esc = true;
 			else if (c == until)
 				break;
-			else if(allowInterpolation && c == 36 && until == 39) {
+			else if (allowInterpolation && c == 36 && until == 39) {
 				im = true;
 			} else {
 				if (c == 10)
@@ -2489,7 +2514,7 @@ class Parser {
 			#if !haxe3
 			case CInt32(v): Std.string(v);
 			#end
-			//CEReg并不会被肘出来（应该吧
+			// CEReg并不会被肘出来（应该吧
 			case _: "???";
 		}
 	}

@@ -14,7 +14,7 @@ class ProxyType {
 		In general, type parameter information cannot be obtained at runtime.
 	**/
 	public inline static function getClass<T>(o: T): Null<Dynamic> {
-		if(o is ScriptClassInstance) {
+		if (o is ScriptClassInstance) {
 			@:privateAccess return cast(o, ScriptClassInstance).urDad;
 		}
 		return Type.getClass(o);
@@ -64,7 +64,7 @@ class ProxyType {
 		The class name does not include any type parameters.
 	**/
 	public inline static function getClassName(c: Dynamic): String {
-		if(c is ScriptClass) {
+		if (c is ScriptClass) {
 			return cast(c, ScriptClass).fullPath;
 		}
 		return Type.getClassName(c);
@@ -105,7 +105,7 @@ class ProxyType {
 		The class name must not include any type parameters.
 	**/
 	public inline static function resolveClass(name: String): Dynamic {
-		if(Interp.existsScriptClass(name)) {
+		if (Interp.existsScriptClass(name)) {
 			return Interp.resolveScriptClass(name);
 		}
 		return Type.resolveClass(name);
@@ -125,7 +125,7 @@ class ProxyType {
 		The enum name must not include any type parameters.
 	**/
 	public inline static function resolveEnum(name: String): Dynamic {
-		if(Interp.existsScriptEnum(name)) {
+		if (Interp.existsScriptEnum(name)) {
 			return Interp.resolveScriptEnum(name);
 		}
 		return Type.resolveEnum(name);
@@ -149,7 +149,7 @@ class ProxyType {
 		guaranteed to be taken into account.
 	**/
 	public inline static function createInstance(cl: Dynamic, args: Array<Dynamic>): Dynamic {
-		if(cl is ScriptClass) {
+		if (cl is ScriptClass) {
 			return cast(cl, ScriptClass).createInstance(args);
 		}
 		return Type.createInstance(cl, args);
@@ -163,7 +163,7 @@ class ProxyType {
 		If `cl` is null, the result is unspecified.
 	**/
 	public inline static function createEmptyInstance<T>(cl: Dynamic): T {
-		if(cl is ScriptClass) {
+		if (cl is ScriptClass) {
 			throw "Cannot Create Empty Instance For Script Class.";
 		}
 		return Type.createEmptyInstance(cl);
@@ -213,9 +213,11 @@ class ProxyType {
 		If `c` is null, the result is unspecified.
 	**/
 	public inline static function getInstanceFields(c: Dynamic): Array<String> {
-		@:privateAccess if(c is ScriptClass) {
-			var rc:ScriptClass = cast c;
-			var fields:Array<String> = [for(f in rc.fields.filter((f) -> !(f.access != null && f.access.contains(AStatic)) && f.name != "new")) f.name];
+		@:privateAccess if (c is ScriptClass) {
+			var rc: ScriptClass = cast c;
+			var fields: Array<String> = [
+				for (f in rc.fields.filter((f) -> !(f.access != null && f.access.contains(AStatic)) && f.name != "new")) f.name
+			];
 		}
 		return Type.getInstanceFields(c);
 	}
@@ -230,9 +232,11 @@ class ProxyType {
 		If `c` is null, the result is unspecified.
 	**/
 	public inline static function getClassFields(c: Dynamic): Array<String> {
-		@:privateAccess if(c is ScriptClass) {
-			var rc:ScriptClass = cast c;
-			var fields:Array<String> = [for(f in rc.fields.filter((f) -> f.access != null && f.access.contains(AStatic))) f.name];
+		@:privateAccess if (c is ScriptClass) {
+			var rc: ScriptClass = cast c;
+			var fields: Array<String> = [
+				for (f in rc.fields.filter((f) -> f.access != null && f.access.contains(AStatic))) f.name
+			];
 		}
 		return Type.getClassFields(c);
 	}

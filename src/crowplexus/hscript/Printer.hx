@@ -30,10 +30,11 @@ class Printer {
 
 	var indent: String = "";
 
-	public function new(?bit:Int = 2, useT:Bool = false) {
-		if(!useT) for(i in 0...bit) {
-			indent += " ";
-		}
+	public function new(?bit: Int = 2, useT: Bool = false) {
+		if (!useT)
+			for (i in 0...bit) {
+				indent += " ";
+			}
 		else {
 			indent = "\t";
 		}
@@ -168,16 +169,16 @@ class Printer {
 		addType(a.t);
 	}
 
-	function printClassField(field:BydFieldDecl) {
+	function printClassField(field: BydFieldDecl) {
 		add("\n");
-		if(field.meta != null) {
-			for(md in field.meta) {
+		if (field.meta != null) {
+			for (md in field.meta) {
 				add(tabs);
 				add("@");
 				add(md.name);
-				if(md.params != null && md.params.length > 0) {
+				if (md.params != null && md.params.length > 0) {
 					add("(");
-					for(arg in md.params) {
+					for (arg in md.params) {
 						expr(arg);
 					}
 					add(")");
@@ -186,35 +187,33 @@ class Printer {
 			}
 		}
 		add(tabs);
-		if(field.access != null) for(modi in field.access) {
-			add(switch(modi) {
-				case APublic: "public";
-				case AStatic: "static";
-				case AInline: "inline";
-				case AOverride: "override";
-				case AMacro: "macro";
-				case APrivate: "private";
-			});
-			add(" ");
-		}
-		switch(field.kind) {
+		if (field.access != null)
+			for (modi in field.access) {
+				add(switch (modi) {
+					case APublic: "public";
+					case AStatic: "static";
+					case AInline: "inline";
+					case AOverride: "override";
+					case AMacro: "macro";
+					case APrivate: "private";
+				});
+				add(" ");
+			}
+		switch (field.kind) {
 			case KVar(decl):
 				add("var ");
 				add(field.name);
-				if(
-					(decl.get != null && decl.get != "default") ||
-					(decl.set != null && decl.set != "default")
-				) {
+				if ((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
 					add("(");
 					add(decl.get);
 					add(", ");
 					add(decl.set);
 					add(")");
 				}
-				if(decl.type != null) {
+				if (decl.type != null) {
 					addType(decl.type);
 				}
-				if(decl.expr != null) {
+				if (decl.expr != null) {
 					add(" = ");
 					expr(decl.expr);
 				}
@@ -223,22 +222,25 @@ class Printer {
 				add("function ");
 				add(field.name);
 				add("(");
-				if(decl.args != null && decl.args.length > 0) for(i=>arg in decl.args) {
-					if(arg.opt) {
-						add("?");
+				if (decl.args != null && decl.args.length > 0)
+					for (i => arg in decl.args) {
+						if (arg.opt) {
+							add("?");
+						}
+						add(arg.name);
+						if (arg.t != null)
+							addType(arg.t);
+						if (arg.value != null) {
+							add(" = ");
+							expr(arg.value);
+						}
+						if (i < decl.args.length - 1) {
+							add(", ");
+						}
 					}
-					add(arg.name);
-					if(arg.t != null) addType(arg.t);
-					if(arg.value != null) {
-						add(" = ");
-						expr(arg.value);
-					}
-					if(i < decl.args.length - 1) {
-						add(", ");
-					}
-				}
 				add(")");
-				if(decl.ret != null) addType(decl.ret);
+				if (decl.ret != null)
+					addType(decl.ret);
 				add(" ");
 				expr(decl.expr);
 		}
@@ -255,27 +257,30 @@ class Printer {
 			case EClass(a, b, c, d):
 				add("class ");
 				add(a);
-				if(b != null) {
+				if (b != null) {
 					add(" extends ");
 					add(b);
 				}
-				if(c != null) for(i=>sb in c) {
-					if(i > 0) add(" ");
-					add("implements ");
-					add(sb);
-				}
+				if (c != null)
+					for (i => sb in c) {
+						if (i > 0)
+							add(" ");
+						add("implements ");
+						add(sb);
+					}
 				add(" {");
-				if(d != null && d.length > 0) {
-					//add("/*");
-					//add("(Sorry. Can't print fields in short)");
-					//add("*/");
+				if (d != null && d.length > 0) {
+					// add("/*");
+					// add("(Sorry. Can't print fields in short)");
+					// add("*/");
 					incrementIndent();
-					for(sb in d) {
-						if(sb == null) continue;
+					for (sb in d) {
+						if (sb == null)
+							continue;
 						printClassField(sb);
 					}
 					decrementIndent();
-				add(tabs);
+					add(tabs);
 				}
 				add("}");
 			case EConst(c):
@@ -287,20 +292,20 @@ class Printer {
 						add("~/");
 						add(i.split("/").join("\\/"));
 						add("/");
-						if (opt != null)
-							add(opt);
+						if (opt != null) add(opt);
 					case CString(s, csgo):
-						if(csgo != null && csgo.length > 0) {
+						if (csgo != null && csgo.length > 0) {
 							add("'");
 							var inPos = 0;
-							for(sm in csgo) {
-								if(sm != null && sm.e != null) {
+							for (sm in csgo) {
+								if (sm != null && sm.e != null) {
 									final old = buf.length;
 									expr(sm.e);
 
-									if(buf.length > old) @:privateAccess {
+									if (buf.length > old)
+										@:privateAccess {
 										var interporation = "${" + buf.toString().substr(old) + "}";
-										s = Printer.stringInsert(s, sm.pos + inPos , interporation);
+										s = Printer.stringInsert(s, sm.pos + inPos, interporation);
 										inPos += interporation.length;
 										final oldBuf = buf.toString();
 										buf = new StringBuf();
@@ -338,9 +343,10 @@ class Printer {
 				if (st == null)
 					st = "default";
 
-				if (ass != null) for(s in ass) {
-					add(s + " ");
-				}
+				if (ass != null)
+					for (s in ass) {
+						add(s + " ");
+					}
 				if (c) {
 					add("final " + n);
 				} else {
@@ -372,8 +378,10 @@ class Printer {
 					add(tabs);
 					expr(e);
 					var re = #if hscriptPos e.e #else e #end;
-					if(re.match(EClass(_, _, _, _)) || re.match(EEnum(_, _))) add("\n");
-					else add(";\n");
+					if (re.match(EClass(_, _, _, _)) || re.match(EEnum(_, _)))
+						add("\n");
+					else
+						add(";\n");
 				}
 				decrementIndent();
 				add(tabs);
@@ -449,9 +457,10 @@ class Printer {
 			case EContinue:
 				add("continue");
 			case EFunction(params, e, _, name, ret, ass):
-				if (ass != null) for(s in ass) {
-					add(s + " ");
-				}
+				if (ass != null)
+					for (s in ass) {
+						add(s + " ");
+					}
 				add("function");
 				if (name != null)
 					add(" " + name);
@@ -664,7 +673,7 @@ class Printer {
 		#end
 	}
 
-	public inline static function stringInsert(s:String, pos:Int, sm:String) {
+	public inline static function stringInsert(s: String, pos: Int, sm: String) {
 		return s.substr(0, pos) + sm + s.substr(pos);
 	}
 }

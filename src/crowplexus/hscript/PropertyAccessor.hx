@@ -25,7 +25,8 @@ class PropertyAccessor {
 	public function get(name: String): Dynamic {
 		if (link_getFunc == null && proxy == null)
 			return null;
-		if(!inState) inState = true;
+		if (!inState)
+			inState = true;
 		return switch (getter) {
 			case "default":
 				link_getFunc();
@@ -57,7 +58,8 @@ class PropertyAccessor {
 	public function set(name: String, value: Dynamic) {
 		if (link_setFunc == null && proxy == null)
 			return null;
-		if(!inState) inState = true;
+		if (!inState)
+			inState = true;
 		return switch (setter) {
 			case "default":
 				link_setFunc(value);

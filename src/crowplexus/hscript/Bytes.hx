@@ -223,7 +223,8 @@ class Bytes {
 			case CEReg(i, opt):
 				bout.addByte(CEReg);
 				doEncodeString(i);
-				if(opt != null) doEncodeString(opt);
+				if (opt != null)
+					doEncodeString(opt);
 			case CFloat(f):
 				bout.addByte(CFloat);
 				doEncodeString(Std.string(f));
@@ -526,7 +527,7 @@ class Bytes {
 				doEncodeExprType(ECheckType);
 				doEncode(e);
 			case EClass(_, _, _, _):
-				//学？学个屁！
+				// 学？学个屁！
 			case EEnum(name, fields):
 				doEncodeExprType(EEnum);
 				doEncodeString(name);

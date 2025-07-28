@@ -46,10 +46,11 @@ class LocalVar {
 
 @:structInit
 class DirectorField {
-	public var value:Dynamic;
-	public var type:String;
-	public var const:Bool;
-	/*@:optional*/ public var isInline:Bool;
+	public var value: Dynamic;
+	public var type: String;
+	public var const: Bool;
+	/*@:optional*/
+	public var isInline: Bool;
 }
 
 @:structInit
@@ -65,27 +66,31 @@ class Interp {
 	 * 还是觉得直接包装成静态更好一点（不模仿）
 	 */
 	static var staticVariables: #if haxe3 Map<String, DirectorField> = new Map() #else Hash<DirectorField> = new Hash() #end;
-	public inline static function getStaticFieldValue(name:String):Dynamic {
-		if(staticVariables.get(name) != null) return staticVariables.get(name).value;
+
+	public inline static function getStaticFieldValue(name: String): Dynamic {
+		if (staticVariables.get(name) != null)
+			return staticVariables.get(name).value;
 		return null;
 	}
 
-	private static var scriptClasses:#if haxe3 Map<String, crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
-	private static var scriptEnums:#if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+	private static var scriptClasses: #if haxe3 Map<String,
+		crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
+	private static var scriptEnums: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
 
 	/**
 	 * 指定script class是否存在
 	 * @param path		指定script class路径
 	 */
-	public static inline function existsScriptClass(path:String):Bool {
+	public static inline function existsScriptClass(path: String): Bool {
 		return scriptClasses.exists(path);
 	}
+
 	/**
 	 * 通过路径获取script class
 	 * @param path		指定script class路径
 	 */
-	public static function resolveScriptClass(path:String):crowplexus.hscript.scriptclass.ScriptClass {
-		if(scriptClasses.exists(path)) {
+	public static function resolveScriptClass(path: String): crowplexus.hscript.scriptclass.ScriptClass {
+		if (scriptClasses.exists(path)) {
 			return scriptClasses.get(path);
 		}
 
@@ -97,15 +102,16 @@ class Interp {
 	 * 指定script enum是否存在
 	 * @param path		指定script enum路径
 	 */
-	public static inline function existsScriptEnum(path:String):Bool {
+	public static inline function existsScriptEnum(path: String): Bool {
 		return scriptEnums.exists(path);
 	}
+
 	/**
 	 * 通过路径获取script enum
 	 * @param path		指定script enum路径
 	 */
-	public static function resolveScriptEnum(path:String):Dynamic {
-		if(scriptEnums.exists(path)) {
+	public static function resolveScriptEnum(path: String): Dynamic {
+		if (scriptEnums.exists(path)) {
 			return scriptEnums.get(path);
 		}
 
@@ -116,7 +122,7 @@ class Interp {
 	/**
 	 * 清除已捕获的静态变量、script class、script enum
 	 */
-	public static function clearCache():Void {
+	public static function clearCache(): Void {
 		staticVariables = #if haxe3 new Map() #else new Hash() #end;
 		scriptClasses = #if haxe3 new Map() #else new Hash() #end;
 		scriptEnums = #if haxe3 new Map() #else new Hash() #end;
@@ -125,11 +131,12 @@ class Interp {
 	/**
 	 * 用于限制script class的创建
 	 */
-	public var allowScriptClass:Bool;
+	public var allowScriptClass: Bool;
+
 	/**
 	 * 用于限制script enum的创建
 	 */
-	public var allowScriptEnum:Bool;
+	public var allowScriptEnum: Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -180,9 +187,9 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
-	@:noCompletion var inFunction:Null<String>;
-	var callTP:Bool;
-	var fieldDotRet:Array<String> = [];
+	@:noCompletion var inFunction: Null<String>;
+	var callTP: Bool;
+	var fieldDotRet: Array<String> = [];
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -290,38 +297,38 @@ class Interp {
 			return;
 		}
 
-		if(directorFields.get(name) != null) {
+		if (directorFields.get(name) != null) {
 			var l = directorFields.get(name);
-			if(l.const) {
+			if (l.const) {
 				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-			} else if(l.type == "func") {
+			} else if (l.type == "func") {
 				warn(ECustom("Cannot reassign function, for constant expression -> " + name));
-			} else if(l.isInline) {
+			} else if (l.isInline) {
 				warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 			} else {
 				l.value = v;
 			}
-		} else if(staticVariables.get(name) != null) {
+		} else if (staticVariables.get(name) != null) {
 			var l = staticVariables.get(name);
-			if(l.const) {
+			if (l.const) {
 				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-			} else if(l.type == "func") {
+			} else if (l.type == "func") {
 				warn(ECustom("Cannot reassign function, for constant expression -> " + name));
-			} else if(l.isInline) {
+			} else if (l.isInline) {
 				warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 			} else {
 				l.value = v;
 			}
 		}
 		/*if (directorFields.exists(name)) {
-			directorFields.set(name, v);
-		} else if (directorFields.exists('$name;const')) {
-			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-		} else if (staticVariables.exists(name)) {
-			staticVariables.set(name, v);
-		} else if (staticVariables.exists('$name;const')) {
-			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-		} */
+				directorFields.set(name, v);
+			} else if (directorFields.exists('$name;const')) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+			} else if (staticVariables.exists(name)) {
+				staticVariables.set(name, v);
+			} else if (staticVariables.exists('$name;const')) {
+				warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		}*/
 		else if (parentInstance != null) {
 			if (_parentFields.contains(name) || _parentFields.contains('set_$name')) {
 				Reflect.setProperty(parentInstance, name, v);
@@ -632,12 +639,12 @@ class Interp {
 					case CInt(v): v;
 					case CFloat(f): f;
 					case CString(s, sm):
-						if(sm != null && sm.length > 0) {
+						if (sm != null && sm.length > 0) {
 							var inPos = 0;
-							for(m in sm) {
-								if(m != null) {
+							for (m in sm) {
+								if (m != null) {
 									var ret = Std.string(exprReturn(m.e));
-									s = Printer.stringInsert(s, m.pos + inPos , ret);
+									s = Printer.stringInsert(s, m.pos + inPos, ret);
 									inPos += ret.length;
 								}
 							}
@@ -646,21 +653,24 @@ class Interp {
 					case CEReg(i, opt):
 						new EReg(i, (opt != null ? opt : ""));
 					case CSuper:
-						if(fieldDotRet.length > 0) error(ECustom("Normal variables cannot be accessed with 'super', use 'this' instead"));
-						else error(ECustom("Cannot use super as value"));
+						if (fieldDotRet.length > 0)
+							error(ECustom("Normal variables cannot be accessed with 'super', use 'this' instead"));
+						else
+							error(ECustom("Cannot use super as value"));
 						null;
 					#if !haxe3
 					case CInt32(v): v;
 					#end
 				}
 			case EIdent(id):
-				if(id == "false" && id == "true" && id == "null")
+				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
 				final re = resolve(id);
-				//这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
-				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if(cls.superClass != null) return cls.superClass;
+				// 这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
+				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if (cls.superClass != null)
+						return cls.superClass;
 				}
 				return re;
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
@@ -670,9 +680,9 @@ class Interp {
 					setter = "default";
 
 				var v = (v == null ? null : expr(v));
-				if(ass != null && ass.contains("inline")) {
+				if (ass != null && ass.contains("inline")) {
 					var tv = Type.typeof(v);
-					switch(tv) {
+					switch (tv) {
 						case Type.ValueType.TNull | Type.ValueType.TFloat | Type.ValueType.TInt | Type.ValueType.TBool | Type.ValueType.TClass(String):
 						default:
 							error(ECustom("Inline variable initialization must be a constant value"));
@@ -681,9 +691,19 @@ class Interp {
 				if (ass != null && ass.contains("static")) {
 					if (staticVariables.get(n) == null) {
 						if (isConst)
-							staticVariables.set(n, {value: v, type: "var", const: isConst, isInline: ass != null && ass.contains("inline")});
+							staticVariables.set(n, {
+								value: v,
+								type: "var",
+								const: isConst,
+								isInline: ass != null && ass.contains("inline")
+							});
 						else {
-							staticVariables.set(n, {value: v, type: "var", const: isConst, isInline: ass != null && ass.contains("inline")});
+							staticVariables.set(n, {
+								value: v,
+								type: "var",
+								const: isConst,
+								isInline: ass != null && ass.contains("inline")
+							});
 							if (getter != "default" || setter != "default") {
 								propertyLinks.set(n, new PropertyAccessor(this, () -> {
 									if (staticVariables.get(n) != null)
@@ -703,7 +723,12 @@ class Interp {
 					}
 				} else {
 					if (!isConst && de == 0 && (getter != "default" || setter != "default")) {
-						directorFields.set(n, {value: v, const: isConst, type: "var", isInline: ass != null && ass.contains("inline")});
+						directorFields.set(n, {
+							value: v,
+							const: isConst,
+							type: "var",
+							isInline: ass != null && ass.contains("inline")
+						});
 						propertyLinks.set(n, new PropertyAccessor(this, () -> {
 							if (directorFields.get(n) != null)
 								return directorFields.get(n).value;
@@ -719,7 +744,12 @@ class Interp {
 						}, getter, setter));
 					} else {
 						if (de == 0) {
-							directorFields.set(n, {value: v, const: isConst, type: "var", isInline: ass != null && ass.contains("inline")});
+							directorFields.set(n, {
+								value: v,
+								const: isConst,
+								type: "var",
+								isInline: ass != null && ass.contains("inline")
+							});
 						} else {
 							declared.push({n: n, old: locals.get(n)});
 							locals.set(n, {r: v, const: isConst});
@@ -781,7 +811,7 @@ class Interp {
 				callTP = true;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
-						if(Tools.expr(e).match(EConst(CSuper)))
+						if (Tools.expr(e).match(EConst(CSuper)))
 							return super_field_call(f, args);
 						fieldDotRet.push(f);
 						var obj = expr(e);
@@ -834,7 +864,7 @@ class Interp {
 						
 					}
 				}*/
-				if(c == null)
+				if (c == null)
 					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
 				else {
 					imports.set(n, c);
@@ -910,9 +940,19 @@ class Interp {
 						// global function
 						if (ass != null && ass.contains("static")) {
 							if (staticVariables.get(name) == null)
-								staticVariables.set(name, {value: f, type: "func", const: false, isInline: ass != null && ass.contains("inline")});
+								staticVariables.set(name, {
+									value: f,
+									type: "func",
+									const: false,
+									isInline: ass != null && ass.contains("inline")
+								});
 						} else {
-							directorFields.set(name, {value: f, type: "func", const: false, isInline: ass != null && ass.contains("inline")});
+							directorFields.set(name, {
+								value: f,
+								type: "func",
+								const: false,
+								isInline: ass != null && ass.contains("inline")
+							});
 						}
 					} else {
 						// function-in-function is a local function
@@ -982,9 +1022,10 @@ class Interp {
 				for (e in params)
 					a.push(expr(e));
 				var re = cnew(cl, a);
-				if(fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-					var cls:crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if(cls.superClass != null) return cls.superClass;
+				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+					if (cls.superClass != null)
+						return cls.superClass;
 				}
 				return re;
 			case EThrow(e):
@@ -1041,12 +1082,12 @@ class Interp {
 			case ECheckType(e, _):
 				return expr(e);
 			case EClass(clName, exName, imName, fields, pkg):
-				if(!allowScriptClass) {
+				if (!allowScriptClass) {
 					warn(ECustom("Cannot create class because it is not supported"));
 					return null;
 				}
 				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + clName : clName);
-				if(!scriptClasses.exists(fullPath)) {
+				if (!scriptClasses.exists(fullPath)) {
 					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
 					scriptClasses.set(cl.fullPath, cl);
 					imports.set(clName, cl);
@@ -1054,12 +1095,12 @@ class Interp {
 					warn(ECustom("Cannot create class with the same name, it already exists"));
 				}
 			case EEnum(enumName, fields, pkg):
-				if(!this.allowScriptEnum) {
+				if (!this.allowScriptEnum) {
 					warn(ECustom("Cannot create enum because it is not supported"));
 					return null;
 				}
 				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + enumName : enumName);
-				if(scriptEnums.exists(fullPath)) {
+				if (scriptEnums.exists(fullPath)) {
 					warn(ECustom("Cannot create enum with the same name, it already exists"));
 					return null;
 				}
@@ -1115,12 +1156,12 @@ class Interp {
 		return null;
 	}
 
-	function super_call(args:Array<Dynamic>):Dynamic {
+	function super_call(args: Array<Dynamic>): Dynamic {
 		error(ECustom("invalid super()"));
 		return null;
 	}
 
-	function super_field_call(field:String, args:Array<Dynamic>):Dynamic {
+	function super_field_call(field: String, args: Array<Dynamic>): Dynamic {
 		error(ECustom("invalid super." + field + "()"));
 		return null;
 	}
@@ -1213,7 +1254,7 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
 			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
 		}
 		return {
@@ -1234,7 +1275,7 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
-		if(o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
 			return v;
 		}
@@ -1362,10 +1403,11 @@ class Interp {
 	}
 
 	function cnew(cl: String, args: Array<Dynamic>): Dynamic {
-		var c:Null<Dynamic> = ProxyType.resolveClass(cl);
+		var c: Null<Dynamic> = ProxyType.resolveClass(cl);
 		if (c == null)
 			c = resolve(cl);
-		if(c == null) error(ECustom("Cannot Create Instance By '" + cl + "', Invlalid Class."));
+		if (c == null)
+			error(ECustom("Cannot Create Instance By '" + cl + "', Invlalid Class."));
 		return ProxyType.createInstance(c, args);
 	}
 }

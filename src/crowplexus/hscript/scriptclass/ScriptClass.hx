@@ -6,46 +6,51 @@ import crowplexus.iris.Iris;
 
 @:access(crowplexus.hscript.scriptclass.ScriptClassInstance)
 class ScriptClass extends BaseScriptClass {
-	public var name:String;
-	public var extend:String;
-	public var packages:Array<String>;
+	public var name: String;
+	public var extend: String;
+	public var packages: Array<String>;
 
-	public var fullPath(get, never):String;
-	@:noCompletion inline function get_fullPath():String {
-		if(this.packages != null && this.packages.length > 0) {
+	public var fullPath(get, never): String;
+
+	@:noCompletion inline function get_fullPath(): String {
+		if (this.packages != null && this.packages.length > 0) {
 			return this.packages.join(".") + "." + name;
 		}
 		return name;
 	}
 
-	private var fields:Array<BydFieldDecl>;
+	private var fields: Array<BydFieldDecl>;
 
-	var staticInterp:Interp;
-	var ogInterp:Interp;
+	var staticInterp: Interp;
+	var ogInterp: Interp;
 
 	@:allow(crowplexus.hscript.Interp)
-	private function new(ogInterp:Interp, clsName:String, extendCls:String, fields:Array<BydFieldDecl>, ?pkg:Array<String>) {
+	private function new(ogInterp: Interp, clsName: String, extendCls: String, fields: Array<BydFieldDecl>, ?pkg: Array<String>) {
 		this.ogInterp = ogInterp;
 		this.name = clsName;
 		this.extend = extendCls;
 		this.packages = pkg;
 
-		if(fields == null) this.fields = [];
-		else this.fields = fields;
+		if (fields == null)
+			this.fields = [];
+		else
+			this.fields = fields;
 
 		staticInterp = new Interp();
 		syncParent(staticInterp);
 		parseStaticFields();
 	}
 
-	public override function sc_exists(name:String):Bool {
-		@:privateAccess return staticInterp.directorFields.get(name) != null || staticInterp.propertyLinks.get(name) != null || staticInterp.variables.exists(name);
+	public override function sc_exists(name: String): Bool {
+		@:privateAccess return staticInterp.directorFields.get(name) != null
+			|| staticInterp.propertyLinks.get(name) != null
+			|| staticInterp.variables.exists(name);
 	}
 
-	public override function sc_get(name:String):Dynamic {
+	public override function sc_get(name: String): Dynamic {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
-			var l = staticInterp.propertyLinks.get(name);
+				var l = staticInterp.propertyLinks.get(name);
 				if (l.inState)
 					return l.get(name);
 				else
@@ -65,7 +70,7 @@ class ScriptClass extends BaseScriptClass {
 		}
 	}
 
-	public override function sc_set(name:String, value:Dynamic) {
+	public override function sc_set(name: String, value: Dynamic) {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
 				var l = staticInterp.propertyLinks.get(name);
@@ -76,13 +81,13 @@ class ScriptClass extends BaseScriptClass {
 				return;
 			}
 
-			if(staticInterp.directorFields.get(name) != null) {
+			if (staticInterp.directorFields.get(name) != null) {
 				var l = staticInterp.directorFields.get(name);
-				if(l.const) {
+				if (l.const) {
 					ogInterp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
-				} else if(l.type == "func") {
+				} else if (l.type == "func") {
 					ogInterp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
-				} else if(l.isInline) {
+				} else if (l.isInline) {
 					ogInterp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 				} else {
 					l.value = value;
@@ -92,18 +97,18 @@ class ScriptClass extends BaseScriptClass {
 		}
 	}
 
-	public override function sc_call(name:String, ?args:Array<Dynamic>):Dynamic {
-		if(Reflect.isFunction(sc_get(name)))
+	public override function sc_call(name: String, ?args: Array<Dynamic>): Dynamic {
+		if (Reflect.isFunction(sc_get(name)))
 			return Reflect.callMethod(null, sc_get(name), args ?? []);
 		return null;
 	}
 
 	private function parseStaticFields() {
 		@:privateAccess
-		for(field in this.fields) {
-			if(field.access != null && field.access.contains(AStatic)) {
+		for (field in this.fields) {
+			if (field.access != null && field.access.contains(AStatic)) {
 				staticInterp.expr(field.pos);
-				switch(field.kind) {
+				switch (field.kind) {
 					case KVar(decl):
 						staticInterp.directorFields.set(field.name, {
 							value: parseValDecl(decl),
@@ -111,10 +116,14 @@ class ScriptClass extends BaseScriptClass {
 							const: decl.isConst,
 							isInline: field.access.contains(AInline)
 						});
-						if((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
-							if(decl.get == "get" && Lambda.find(this.fields, (f) -> f.name == ("get_" + field.name) && field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
+						if ((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
+							if (decl.get == "get"
+								&& Lambda.find(this.fields,
+									(f) -> f.name == ("get_" + field.name) && field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
 								ogInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
-							if(decl.set == "set" && Lambda.find(this.fields, (f) -> f.name == ("set_" + field.name) && f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
+							if (decl.set == "set"
+								&& Lambda.find(this.fields,
+									(f) -> f.name == ("set_" + field.name) && f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
 								ogInterp.error(ECustom("No setter function found for \"" + field.name + "\" -> \"set_" + field.name + "\""));
 							staticInterp.propertyLinks.set(field.name, new PropertyAccessor(staticInterp, () -> {
 								final n = field.name;
@@ -144,106 +153,117 @@ class ScriptClass extends BaseScriptClass {
 		}
 	}
 
-	private function parseValDecl(decl:VarDecl) {
+	private function parseValDecl(decl: VarDecl) {
 		@:privateAccess
-		return if(decl.expr == null) {
+		return if (decl.expr == null) {
 			null;
 		} else {
 			staticInterp.exprReturn(decl.expr);
 		}
 	}
 
-	private function parseFuncDecl(decl:FunctionDecl, name:String) {
+	private function parseFuncDecl(decl: FunctionDecl, name: String) {
 		@:privateAccess {
 			var capturedLocals = staticInterp.duplicate(staticInterp.locals);
-			if(decl.args == null) decl.args = [];
+			if (decl.args == null)
+				decl.args = [];
 			var minParams = decl.args.length;
 			var paramDefs = [];
-			for(param in decl.args) {
-				if(param.opt || param.value != null) minParams--;
-				if(param.value != null) {
+			for (param in decl.args) {
+				if (param.opt || param.value != null)
+					minParams--;
+				if (param.value != null) {
 					paramDefs.push({
 						staticInterp.exprReturn(param.value);
 					});
-				} else paramDefs.push(null);
+				} else
+					paramDefs.push(null);
 			}
-			var func = function(args:Array<Dynamic>) {
-					if(args.length < minParams) {
-						ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name + "." + name + "'"));
-					}
+			var func = function(args: Array<Dynamic>) {
+				if (args.length < minParams) {
+					ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name
+						+ "." + name + "'"));
+				}
 
-					// make sure mandatory args are forced
-					var args2 = [];
-					var extraParams = args.length - minParams;
-					var pos = 0;
-					for (index=>p in decl.args) {
-						if (p.opt) {
-							if (extraParams > 0) {
-								if(args[pos] == null && paramDefs[index] != null)
-									args2.push(paramDefs[index]);
-								else args2.push(args[pos]);
-								extraParams--;
-								pos++;
-							} else
+				// make sure mandatory args are forced
+				var args2 = [];
+				var extraParams = args.length - minParams;
+				var pos = 0;
+				for (index => p in decl.args) {
+					if (p.opt) {
+						if (extraParams > 0) {
+							if (args[pos] == null && paramDefs[index] != null)
 								args2.push(paramDefs[index]);
-						} else {
-							if(args[pos] == null && paramDefs[index] != null)
-								args2.push(paramDefs[index]);
-							else args2.push(args[pos]);
+							else
+								args2.push(args[pos]);
+							extraParams--;
 							pos++;
-						}
+						} else
+							args2.push(paramDefs[index]);
+					} else {
+						if (args[pos] == null && paramDefs[index] != null)
+							args2.push(paramDefs[index]);
+						else
+							args2.push(args[pos]);
+						pos++;
 					}
-					args = args2;
-					var old = staticInterp.locals, depth = staticInterp.depth;
-					staticInterp.depth++;
-					staticInterp.locals = staticInterp.duplicate(capturedLocals);
-					for (i in 0...decl.args.length)
-						staticInterp.locals.set(decl.args[i].name, {r: args[i], const: false});
+				}
+				args = args2;
+				var old = staticInterp.locals, depth = staticInterp.depth;
+				staticInterp.depth++;
+				staticInterp.locals = staticInterp.duplicate(capturedLocals);
+				for (i in 0...decl.args.length)
+					staticInterp.locals.set(decl.args[i].name, {r: args[i], const: false});
 
-					var r = null;
-					var oldDecl = staticInterp.declared.length;
-					if (staticInterp.inTry)
-						try {
-							if(name != null) staticInterp.inFunction = name;
-							else staticInterp.inFunction = '(Invalid Function Name.)';
-							r = staticInterp.exprReturn(decl.expr, false);
-							staticInterp.inFunction = null;
-						} catch (e:Dynamic) {
-							staticInterp.inFunction = null;
-							staticInterp.locals = old;
-							staticInterp.depth = depth;
-							#if neko
-							neko.Lib.rethrow(e);
-							#else
-							throw e;
-							#end
-						}
-					else {
-						if(name != null) staticInterp.inFunction = name;
-						else staticInterp.inFunction = '(Invalid Function Name.)';
+				var r = null;
+				var oldDecl = staticInterp.declared.length;
+				if (staticInterp.inTry)
+					try {
+						if (name != null)
+							staticInterp.inFunction = name;
+						else
+							staticInterp.inFunction = '(Invalid Function Name.)';
 						r = staticInterp.exprReturn(decl.expr, false);
 						staticInterp.inFunction = null;
+					} catch (e:Dynamic) {
+						staticInterp.inFunction = null;
+						staticInterp.locals = old;
+						staticInterp.depth = depth;
+						#if neko
+						neko.Lib.rethrow(e);
+						#else
+						throw e;
+						#end
 					}
-					staticInterp.restore(oldDecl);
-					staticInterp.locals = old;
-					staticInterp.depth = depth;
-					return r;
+				else {
+					if (name != null)
+						staticInterp.inFunction = name;
+					else
+						staticInterp.inFunction = '(Invalid Function Name.)';
+					r = staticInterp.exprReturn(decl.expr, false);
+					staticInterp.inFunction = null;
+				}
+				staticInterp.restore(oldDecl);
+				staticInterp.locals = old;
+				staticInterp.depth = depth;
+				return r;
 			};
 			return Reflect.makeVarArgs(func);
 		}
 	}
 
-	public function createInstance(?args:Array<Dynamic>) {
-		var instance = new ScriptClassInstance(this.ogInterp, name, extend, this.fields.filter((f) -> !f.access.contains(AStatic) && f.name != "new"), Lambda.find(this.fields, (f) -> f.name == "new"), this, args);
+	public function createInstance(?args: Array<Dynamic>) {
+		var instance = new ScriptClassInstance(this.ogInterp, name, extend, this.fields.filter((f) -> !f.access.contains(AStatic) && f.name != "new"),
+			Lambda.find(this.fields, (f) -> f.name == "new"), this, args);
 		return instance;
 	}
 
-	private function syncParent(s:Interp) {
+	private function syncParent(s: Interp) {
 		@:privateAccess s.imports = ogInterp.imports;
 		s.variables.set("trace", ogInterp.variables.get("trace"));
 	}
 
-	public function toString():String {
+	public function toString(): String {
 		return Std.string({
 			name: this.name,
 			extend: this.extend,

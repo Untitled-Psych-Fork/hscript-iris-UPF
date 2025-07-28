@@ -17,8 +17,8 @@ class ProxyReflect {
 
 		If `o` or `field` are null, the result is unspecified.
 	**/
-	public static inline function hasField(o:Dynamic, field:String):Bool {
-		if(o is BaseScriptClass) {
+	public static inline function hasField(o: Dynamic, field: String): Bool {
+		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_exists(field);
 		}
 		return Reflect.hasField(o, field);
@@ -35,8 +35,8 @@ class ProxyReflect {
 
 		If `field` is null, the result is unspecified.
 	**/
-	public static inline function field(o:Dynamic, field:String):Dynamic {
-		if(o is BaseScriptClass) {
+	public static inline function field(o: Dynamic, field: String): Dynamic {
+		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_get(field);
 		}
 		return Reflect.field(o, field);
@@ -50,8 +50,8 @@ class ProxyReflect {
 
 		If `o` or `field` are null, the result is unspecified.
 	**/
-	public static inline function setField(o:Dynamic, field:String, value:Dynamic):Void {
-		if(o is BaseScriptClass) {
+	public static inline function setField(o: Dynamic, field: String, value: Dynamic): Void {
+		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_set(field, value);
 		}
 		Reflect.setField(o, field, value);
@@ -66,8 +66,8 @@ class ProxyReflect {
 
 		If `o` or `field` are null, the result is unspecified.
 	**/
-	public static inline function getProperty(o:Dynamic, field:String):Dynamic {
-		if(o is BaseScriptClass) {
+	public static inline function getProperty(o: Dynamic, field: String): Dynamic {
+		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_get(field);
 		}
 		return Reflect.getProperty(o, field);
@@ -82,8 +82,8 @@ class ProxyReflect {
 
 		If `field` is null, the result is unspecified.
 	**/
-	public static inline function setProperty(o:Dynamic, field:String, value:Dynamic):Void {
-		if(o is BaseScriptClass) {
+	public static inline function setProperty(o: Dynamic, field: String, value: Dynamic): Void {
+		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_set(field, value);
 		}
 		Reflect.setProperty(o, field, value);
@@ -102,7 +102,7 @@ class ProxyReflect {
 			or by using `(object : Dynamic).field`. However, if `func` has a context, `o` is
 			ignored like on other targets.
 	**/
-	public static inline function callMethod(o:Dynamic, func:haxe.Constraints.Function, args:Array<Dynamic>):Dynamic {
+	public static inline function callMethod(o: Dynamic, func: haxe.Constraints.Function, args: Array<Dynamic>): Dynamic {
 		return Reflect.callMethod(o, func, args);
 	}
 
@@ -114,7 +114,7 @@ class ProxyReflect {
 
 		If `o` is null, the result is unspecified.
 	**/
-	public static inline function fields(o:Dynamic):Array<String> {
+	public static inline function fields(o: Dynamic): Array<String> {
 		return Reflect.fields(o);
 	}
 
@@ -123,7 +123,7 @@ class ProxyReflect {
 
 		If `f` is null, the result is false.
 	**/
-	public static inline function isFunction(f:Dynamic):Bool {
+	public static inline function isFunction(f: Dynamic): Bool {
 		return Reflect.isFunction(f);
 	}
 
@@ -148,7 +148,7 @@ class ProxyReflect {
 		If `a` and `b` are null, the result is 0. If only one of them is null,
 		the result is unspecified.
 	**/
-	public static inline function compare<T>(a:T, b:T):Int {
+	public static inline function compare<T>(a: T, b: T): Int {
 		return Reflect.compare(a, b);
 	}
 
@@ -164,7 +164,7 @@ class ProxyReflect {
 		If `f1` or `f2` are member method closures, the result is true if they
 		are closures of the same method on the same object value, false otherwise.
 	**/
-	public static inline function compareMethods(f1:Dynamic, f2:Dynamic):Bool {
+	public static inline function compareMethods(f1: Dynamic, f2: Dynamic): Bool {
 		return Reflect.compareMethods(f1, f2);
 	}
 
@@ -180,7 +180,7 @@ class ProxyReflect {
 
 		Otherwise, including if `v` is null, the result is false.
 	**/
-	public static inline function isObject(v:Dynamic):Bool {
+	public static inline function isObject(v: Dynamic): Bool {
 		return Reflect.isObject(v);
 	}
 
@@ -192,7 +192,7 @@ class ProxyReflect {
 
 		Otherwise, including if `v` is null, the result is false.
 	**/
-	public static inline function isEnumValue(v:Dynamic):Bool {
+	public static inline function isEnumValue(v: Dynamic): Bool {
 		return Reflect.isEnumValue(v);
 	}
 
@@ -203,7 +203,7 @@ class ProxyReflect {
 
 		If `o` or `field` are null, the result is unspecified.
 	**/
-	public static inline function deleteField(o:Dynamic, field:String):Bool {
+	public static inline function deleteField(o: Dynamic, field: String): Bool {
 		return Reflect.deleteField(o, field);
 	}
 
@@ -214,7 +214,7 @@ class ProxyReflect {
 
 		If `o` is null, the result is `null`.
 	**/
-	public static inline function copy<T>(o:Null<T>):Null<T> {
+	public static inline function copy<T>(o: Null<T>): Null<T> {
 		return Reflect.copy(o);
 	}
 
@@ -222,7 +222,7 @@ class ProxyReflect {
 		Transform a function taking an array of arguments into a function that can
 		be called with any number of arguments.
 	**/
-	public static inline function makeVarArgs(f:Array<Dynamic>->Dynamic):Dynamic {
+	public static inline function makeVarArgs(f: Array<Dynamic>->Dynamic): Dynamic {
 		return Reflect.makeVarArgs(f);
 	}
 }
