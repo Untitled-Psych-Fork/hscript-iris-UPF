@@ -27,19 +27,19 @@ class Main {
 
 	@:testName("typedef & name")
 	public static function test_typedef_enum() {
-		var script:HScript = new HScript("typedef_enum");
+		var script:HScript = new HScript("typedef_enum", true, false, false);
 		script.execute();
 	}
 
 	@:testName("regex & interpolation")
 	public static function test_regex_interpolation() {
-		var script:HScript = new HScript("test_regex_interpolation", true);
+		var script:HScript = new HScript("test_regex_interpolation", false, false, true);
 		script.set("interpolation_player", "Beihu235");
 		script.execute();
 	}
 
 	public static function test_class_samples() {
-		var script:HScript = new HScript("class_samples");
+		var script:HScript = new HScript("class_samples", false, true, false);
 		script.execute();
 	}
 

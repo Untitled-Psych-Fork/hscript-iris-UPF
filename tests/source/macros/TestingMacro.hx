@@ -59,7 +59,9 @@ class TestingMacro {
 					var __start = "======[" + "Starting To Test Script -> \"" + ${{expr: EConst(CString(display)), pos: Context.currentPos()}} + "\"" + "]======";
 					var __end = "======[" + "Over Test Script -> \"" + ${{expr: EConst(CString(display)), pos: Context.currentPos()}} + "\"" + "]======";
 					Sys.println("\n" + __shagua(__start) + "\n" + __start);
+					var start = haxe.Timer.stamp();
 					$e{func.expr}
+					Sys.println("Execute Time: " + (haxe.Timer.stamp() - start) + "s");
 					Sys.println(__end + "\n" + __shagua(__end) + "\n");
 				};
 				func.expr = added;
