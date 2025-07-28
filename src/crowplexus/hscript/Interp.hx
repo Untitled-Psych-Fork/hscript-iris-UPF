@@ -187,7 +187,7 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
-	@:noCompletion var inFunction: Null<String>;
+	var inFunction: Null<String>;
 	var callTP: Bool;
 	var fieldDotRet: Array<String> = [];
 
@@ -914,6 +914,10 @@ class Interp {
 						me.locals.set(params[i].name, {r: args[i], const: false});
 					var r = null;
 					var oldDecl = declared.length;
+
+					final of:Null<String> = inFunction;
+					if(name != null) inFunction = name;
+					else inFunction = "(*unamed)";
 					if (inTry)
 						try {
 							r = me.exprReturn(fexpr, false);
@@ -929,6 +933,8 @@ class Interp {
 					else {
 						r = me.exprReturn(fexpr, false);
 					}
+					inFunction = of;
+
 					restore(oldDecl);
 					me.locals = old;
 					me.depth = depth;
@@ -1394,7 +1400,9 @@ class Interp {
 		}
 
 		return {
-			call(o, get(o, f), args);
+			final func:Dynamic = get(o, f);
+			if(!Reflect.isFunction(func)) error(ECustom("Invalid Function -> '" + f + "'"));
+			call(o, func, args);
 		}
 	}
 

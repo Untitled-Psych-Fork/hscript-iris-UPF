@@ -157,9 +157,13 @@ class ScriptClassInterp extends Interp {
 	}
 
 	override function super_call(args: Array<Dynamic>): Dynamic {
-		if (scriptClass.needExtend())
-			scriptClass.createSuperClassInstance(args);
-		else
+		if (scriptClass.needExtend()) {
+			if(this.inFunction == "new") {
+				if(scriptClass.superClass == null) {
+					scriptClass.createSuperClassInstance(args);
+				} else warn(ECustom("Cannot reuse to call 'super()'."));
+			} else error(ECustom("Cannot call 'super()' outside of constructor"));
+		} else
 			error(ECustom("Current class does not have a super"));
 		return null;
 	}

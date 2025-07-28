@@ -98,11 +98,11 @@ class ScriptClassInstance extends BaseScriptClass {
 			if (__interp.directorFields.get(name) != null) {
 				var l = __interp.directorFields.get(name);
 				if (l.const) {
-					__interp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+					__ogInterp.warn(ECustom("Cannot reassign final, for constant expression -> " + name));
 				} else if (l.type == "func") {
-					__interp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
+					__ogInterp.warn(ECustom("Cannot reassign function, for constant expression -> " + name));
 				} else if (l.isInline) {
-					__interp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
+					__ogInterp.warn(ECustom("Variables marked as inline cannot be rewritten -> " + name));
 				} else {
 					l.value = value;
 				}
@@ -198,14 +198,14 @@ class ScriptClassInstance extends BaseScriptClass {
 								if (__interp.directorFields.get(n) != null)
 									return __interp.directorFields.get(n).value;
 								else
-									throw __ogInterp.error(EUnknownVariable(n));
+									__ogInterp.error(EUnknownVariable(n));
 								return null;
 							}, (val) -> {
 								final n = field.name;
 								if (__interp.directorFields.get(n) != null)
 									__interp.directorFields.get(n).value = val;
 								else
-									throw __ogInterp.error(EUnknownVariable(n));
+									__ogInterp.error(EUnknownVariable(n));
 								return val;
 							}, decl.get ?? "default", decl.set ?? "default"));
 						}
@@ -239,9 +239,7 @@ class ScriptClassInstance extends BaseScriptClass {
 				case _:
 			}
 		} else if (!needExtend()) {
-			trace("aha");
 			__ogInterp.error(ECustom("ScriptClass '" + name + "' has not constructor."));
-			trace("aha");
 		}
 	}
 
@@ -278,7 +276,7 @@ class ScriptClassInstance extends BaseScriptClass {
 			}
 			var func = function(args: Array<Dynamic>) {
 				if (args.length < minParams) {
-					__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name
+						__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name
 						+ "." + name + "'"));
 				}
 
@@ -314,16 +312,14 @@ class ScriptClassInstance extends BaseScriptClass {
 
 				var r = null;
 				var oldDecl = __interp.declared.length;
+
+				final of:Null<String> = __interp.inFunction;
+				if(name != null) __interp.inFunction = name;
+				else __interp.inFunction = "(*unamed)";
 				if (__interp.inTry)
 					try {
-						if (name != null)
-							__interp.inFunction = name;
-						else
-							__interp.inFunction = '(Invalid Function Name.)';
 						r = __interp.exprReturn(decl.expr, false);
-						__interp.inFunction = null;
 					} catch (e:Dynamic) {
-						__interp.inFunction = null;
 						__interp.locals = old;
 						__interp.depth = depth;
 						#if neko
@@ -333,13 +329,10 @@ class ScriptClassInstance extends BaseScriptClass {
 						#end
 					}
 				else {
-					if (name != null)
-						__interp.inFunction = name;
-					else
-						__interp.inFunction = '(Invalid Function Name.)';
 					r = __interp.exprReturn(decl.expr, false);
-					__interp.inFunction = null;
 				}
+				__interp.inFunction = of;
+
 				__interp.restore(oldDecl);
 				__interp.locals = old;
 				__interp.depth = depth;
@@ -355,5 +348,15 @@ class ScriptClassInstance extends BaseScriptClass {
 			Type.createInstance(cls, [cast this].concat(args));
 		else
 			this.superClass = Type.createInstance(cls, args);
+	}
+
+	public function toString():String {
+		trace("sm");
+		if(sc_exists("toString")) {
+			var result:Dynamic = sc_call("toString");
+			return Std.string(result);
+		}
+
+		return name;
 	}
 }

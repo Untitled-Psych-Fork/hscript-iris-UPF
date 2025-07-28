@@ -14,6 +14,8 @@ class ScriptedClassMacro {
 	public static inline var SUPER_FUNCTION_PREFIX: String = "__SC_SUPER_";
 
 	static var noOverrides: Array<String>;
+	static var overrideFields: Array<ChouxiangFunction>;
+	static var constructor: ChouxiangFunction;
 
 	public static function build(): Array<Field> {
 		var cls: ClassType = Context.getLocalClass().get();
@@ -37,14 +39,14 @@ class ScriptedClassMacro {
 			}
 		}
 		var fields = [];
-		fields = fields.concat(buildIDKField());
-		var consss = getConstructor(cls);
-		if (consss == null)
+		constructor = getConstructor(cls);
+		if (constructor == null)
 			throw "No constructor defined in super class.";
-		fields.push(buildConstructor(consss));
-		var oversss = getOverrides(cls);
-		fields = fields.concat(buildOverrides(oversss));
-		fields = fields.concat(buildSuperFunctions(oversss));
+		fields.push(buildConstructor(constructor));
+		overrideFields = getOverrides(cls);
+		fields = fields.concat(buildIDKField());
+		fields = fields.concat(buildOverrides(overrideFields));
+		fields = fields.concat(buildSuperFunctions(overrideFields));
 		return fields;
 	}
 
@@ -57,6 +59,7 @@ class ScriptedClassMacro {
 			pos: Context.currentPos(),
 		}
 		fields.push(f___e_standClass);
+
 		return fields;
 	}
 

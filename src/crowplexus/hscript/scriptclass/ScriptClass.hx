@@ -217,16 +217,13 @@ class ScriptClass extends BaseScriptClass {
 
 				var r = null;
 				var oldDecl = staticInterp.declared.length;
+				final of:Null<String> = staticInterp.inFunction;
+				if(name != null) staticInterp.inFunction = name;
+				else staticInterp.inFunction = "(*unamed)";
 				if (staticInterp.inTry)
 					try {
-						if (name != null)
-							staticInterp.inFunction = name;
-						else
-							staticInterp.inFunction = '(Invalid Function Name.)';
 						r = staticInterp.exprReturn(decl.expr, false);
-						staticInterp.inFunction = null;
 					} catch (e:Dynamic) {
-						staticInterp.inFunction = null;
 						staticInterp.locals = old;
 						staticInterp.depth = depth;
 						#if neko
@@ -236,13 +233,9 @@ class ScriptClass extends BaseScriptClass {
 						#end
 					}
 				else {
-					if (name != null)
-						staticInterp.inFunction = name;
-					else
-						staticInterp.inFunction = '(Invalid Function Name.)';
 					r = staticInterp.exprReturn(decl.expr, false);
-					staticInterp.inFunction = null;
 				}
+				staticInterp.inFunction = of;
 				staticInterp.restore(oldDecl);
 				staticInterp.locals = old;
 				staticInterp.depth = depth;
@@ -264,10 +257,6 @@ class ScriptClass extends BaseScriptClass {
 	}
 
 	public function toString(): String {
-		return Std.string({
-			name: this.name,
-			extend: this.extend,
-			path: this.fullPath
-		});
+		return "ScriptClass<" + this.fullPath + ">";
 	}
 }
