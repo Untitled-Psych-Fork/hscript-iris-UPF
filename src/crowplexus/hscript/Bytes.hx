@@ -223,8 +223,9 @@ class Bytes {
 			case CEReg(i, opt):
 				bout.addByte(CEReg);
 				doEncodeString(i);
-				if (opt != null)
+				doEncodeCond(opt != null, function() {
 					doEncodeString(opt);
+				});
 			case CFloat(f):
 				bout.addByte(CFloat);
 				doEncodeString(Std.string(f));
@@ -278,7 +279,12 @@ class Bytes {
 			case CSuper:
 				CSuper;
 			case CEReg:
-				CEReg(doDecodeString());
+				var r:String = doDecodeString();
+				var opt:Null<String> = null;
+				doDecodeCond(function() {
+					opt = doDecodeString();
+				});
+				CEReg(r, opt);
 			#if !haxe3
 			case CInt32:
 				var i = bin.get(pin) | (bin.get(pin + 1) << 8) | (bin.get(pin + 2) << 16);
@@ -373,6 +379,18 @@ class Bytes {
 		// doEncode(a.t);
 	}
 
+	function doEncodeCond(cond:Bool, func:Void->Void) {
+		doEncodeBool(cond);
+		if(cond)
+			func();
+	}
+
+	function doDecodeCond(func:Void->Void) {
+		if(doDecodeBool()) {
+			func();
+		}
+	}
+
 	function doEncode(e: Expr) {
 		#if hscriptPos
 		doEncodeString(e.origin);
@@ -381,21 +399,36 @@ class Bytes {
 		#end
 		switch (e) {
 			case EIgnore(_):
-			case EEReg(r, opt):
 			case EConst(c):
 				doEncodeExprType(EConst);
 				doEncodeConst(c);
 			case EIdent(v):
 				doEncodeExprType(EIdent);
 				doEncodeString(v);
-			case EVar(n, _, _, e, getter, setter, c, s):
+			case EVar(n, depth, _, e, getter, setter, c, s):
 				doEncodeExprType(EVar);
 				doEncodeString(n);
+				doEncodeInt(depth);
 				if (e == null)
 					bout.addByte(255);
 				else
 					doEncode(e);
-				doEncodeBool(c);
+
+				doEncodeCond(getter != null, function() {
+					doEncodeString(getter);
+				});
+				doEncodeCond(setter != null, function() {
+					doEncodeString(setter);
+				});
+				doEncodeCond(c != null, function() {
+					doEncodeBool(c);
+				});
+				doEncodeCond(s != null && s.length > 0, function() {
+					doEncodeInt(s.length);
+					for(ac in s) {
+						doEncodeString(ac);
+					}
+				});
 			case EParent(e):
 				doEncodeExprType(EParent);
 				doEncode(e);
@@ -450,13 +483,22 @@ class Bytes {
 				doEncodeExprType(EBreak);
 			case EContinue:
 				doEncodeExprType(EContinue);
-			case EFunction(params, e, _, name, _):
+			case EFunction(params, e, depth, name, _, s):
 				doEncodeExprType(EFunction);
 				bout.addByte(params.length);
 				for (p in params)
 					doEncodeArg(p);
 				doEncode(e);
-				doEncodeString(name == null ? "" : name);
+				doEncodeInt(depth);
+				doEncodeCond(name != null, function() {
+					doEncodeString(name);
+				});
+				doEncodeCond(s != null && s.length > 0, function() {
+					doEncodeInt(s.length);
+					for(ac in s) {
+						doEncodeString(ac);
+					}
+				});
 			case EReturn(e):
 				doEncodeExprType(EReturn);
 				if (e == null)
@@ -583,15 +625,35 @@ class Bytes {
 		return switch (type) {
 			case EConst:
 				EConst(doDecodeConst());
-			case EEReg:
-				EEReg(doDecodeString(), doDecodeString());
 			case EIdent:
 				EIdent(doDecodeString());
 			case EVar:
 				var v = doDecodeString();
+				var depth = doDecodeInt();
 				var e = doDecode();
-				var c = doDecodeBool();
-				EVar(v, 0, e, c);
+				var c:Null<Bool> = null;
+				var acs:Array<String> = null;
+
+				var getter:Null<String> = null;
+				var setter:Null<String> = null;
+
+				doDecodeCond(function() {
+					getter = doDecodeString();
+				});
+				doDecodeCond(function() {
+					setter = doDecodeString();
+				});
+				doDecodeCond(function() {
+					c = doDecodeBool();
+				});
+				doDecodeCond(function() {
+					var length = doDecodeInt();
+					acs = [];
+					for(i in 0...length) {
+						acs.push(doDecodeString());
+					}
+				});
+				EVar(v, depth, e, getter, setter, c, acs);
 			case EParent:
 				EParent(doDecode());
 			case EBlock:
@@ -639,11 +701,21 @@ class Bytes {
 				EContinue;
 			case EFunction:
 				var params = new Array<Argument>();
+				var acs:Array<String> = null;
 				for (i in 0...bin.get(pin++))
 					params.push(doDecodeArg());
 				var e = doDecode();
-				var name = doDecodeString();
-				EFunction(params, e, 0, (name == "") ? null : name);
+				var depth = doDecodeInt();
+				var name:Null<String> = null;
+				doDecodeCond(function() {name = doDecodeString();});
+				doDecodeCond(function() {
+					var length = doDecodeInt();
+					acs = [];
+					for(i in 0...length) {
+						acs.push(doDecodeString());
+					}
+				});
+				EFunction(params, e, depth, name, acs);
 			case EReturn:
 				EReturn(doDecode());
 			case EArray:

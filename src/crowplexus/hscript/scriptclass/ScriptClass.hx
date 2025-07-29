@@ -9,6 +9,7 @@ class ScriptClass extends BaseScriptClass {
 	public var name: String;
 	public var extend: String;
 	public var packages: Array<String>;
+	public var superClassDecl: Class<Dynamic>;
 
 	public var fullPath(get, never): String;
 
@@ -29,6 +30,9 @@ class ScriptClass extends BaseScriptClass {
 		this.ogInterp = ogInterp;
 		this.name = clsName;
 		this.extend = extendCls;
+		if(extendCls != null && ogInterp.imports.get(extendCls) is Class) {
+			this.superClassDecl = cast ogInterp.imports.get(extendCls);
+		}
 		this.packages = pkg;
 
 		if (fields == null)
@@ -247,7 +251,7 @@ class ScriptClass extends BaseScriptClass {
 
 	public function createInstance(?args: Array<Dynamic>) {
 		var instance = new ScriptClassInstance(this.ogInterp, name, extend, this.fields.filter((f) -> !f.access.contains(AStatic) && f.name != "new"),
-			Lambda.find(this.fields, (f) -> f.name == "new"), this, args);
+			Lambda.find(this.fields, (f) -> f.name == "new"), this, args ?? []);
 		return instance;
 	}
 

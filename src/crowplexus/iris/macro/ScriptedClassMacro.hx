@@ -44,13 +44,13 @@ class ScriptedClassMacro {
 			throw "No constructor defined in super class.";
 		fields.push(buildConstructor(constructor));
 		overrideFields = getOverrides(cls);
-		fields = fields.concat(buildIDKField());
+		fields = fields.concat(buildIDKField(Context.getLocalClass(), cls.superClass));
 		fields = fields.concat(buildOverrides(overrideFields));
 		fields = fields.concat(buildSuperFunctions(overrideFields));
 		return fields;
 	}
 
-	private static function buildIDKField(): Array<Field> {
+	private static function buildIDKField(cls:Ref<ClassType>, superCls:Null<{t:Ref<ClassType>, params:Array<Type>}>): Array<Field> {
 		var fields: Array<Field> = [];
 		var f___e_standClass: Field = {
 			name: "__sc_standClass",
@@ -59,6 +59,70 @@ class ScriptedClassMacro {
 			pos: Context.currentPos(),
 		}
 		fields.push(f___e_standClass);
+
+		var f___e_scriptClassLists: Field = {
+			name: "__sc_scriptClassLists",
+			access: [APublic, AStatic],
+			kind: FFun({
+				args: [],
+				ret: macro: Array<String>,
+				expr: macro {
+					var grp:Array<String> = [];
+					@:privateAccess
+					for(path=>sc in crowplexus.hscript.Interp.scriptClasses) {
+						if(sc.superClassDecl == $i{cls.get().name}) {
+							grp.push(path);
+						}
+					}
+					return grp;
+				}
+			}),
+			pos: Context.currentPos(),
+			doc: "/**
+ * @see [[链接已屏蔽]]
+ * 总之就是可以通过这个获取继承了这玩意儿的所有脚本类（大概
+ */"
+		};
+		fields.push(f___e_scriptClassLists);
+
+		var f___e_createInstanceScriptClass: Field = {
+			name: "createScriptClassInstance",
+			access: [APublic, AStatic],
+			kind: FFun({
+				ret: Context.toComplexType(TInst(superCls.t, superCls.params)),
+				args: cast [{
+					name: "className",
+					ret: macro: String
+				},
+				{
+					name: "args",
+					opt: true,
+					ret: macro: Array<Dynamic>
+				}],
+				expr: macro {
+					var cls:crowplexus.hscript.scriptclass.ScriptClass = crowplexus.hscript.Interp.resolveScriptClass(className);
+					if(cls != null) {
+						return try {
+							cls.createInstance(args).superClass;
+						}
+						#if hscriptPos
+						catch(err:crowplexus.hscript.Expr.Error) {
+							crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
+							null;
+						}
+						#end
+						catch(e) {
+							Sys.println(Std.string(e));
+							null;
+						}
+					}
+
+					return null;
+				}
+			}),
+			pos: Context.currentPos()
+		};
+		fields.push(f___e_createInstanceScriptClass);
 
 		return fields;
 	}
@@ -179,10 +243,22 @@ class ScriptedClassMacro {
 							@:privateAccess
 							if (__sc_standClass != null
 								&& __sc_standClass.overrides.contains(${{expr: EConst(CString(fname)), pos: Context.currentPos()}
-								})) {
-								var result = __sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+							})) {
+								var result:Dynamic = try {
+									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+								}
+								#if hscriptPos
+								catch(err:crowplexus.hscript.Expr.Error) {
+									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
+									null;
+								}
+								#end
+								catch(e) {
+									Sys.println(Std.string(e));
+									null;
+								}
 								return cast result;
-								} else
+							} else
 								return super.$fname($a{fnargs});
 						}
 					} else {
@@ -190,9 +266,19 @@ class ScriptedClassMacro {
 							@:privateAccess
 							if (__sc_standClass != null
 								&& __sc_standClass.overrides.contains(${{expr: EConst(CString(fname)), pos: Context.currentPos()}
-								})) {
-								var result = __sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
-								} else
+							})) {
+								try {
+									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+								}
+								#if hscriptPos
+								catch(err:crowplexus.hscript.Expr.Error) {
+									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
+								}
+								#end
+								catch(e) {
+									Sys.println(Std.string(e));
+								}
+							} else
 								super.$fname($a{fnargs});
 						}
 					}

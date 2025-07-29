@@ -141,8 +141,6 @@ class ScriptClassInstance extends BaseScriptClass {
 		cacheSuperClassField();
 		@:privateAccess
 		if (needExtend()) {
-			var cls = __interp.imports.get(extend);
-
 			for (field in fields) {
 				if (field != null && field.access.contains(AOverride)) {
 					if (!cacheSuperFieldsName.contains(field.name))
@@ -154,7 +152,7 @@ class ScriptClassInstance extends BaseScriptClass {
 						__ogInterp.error(ECustom("Unexpected this field '" + field.name + "' as 'override' only applies to function"));
 				}
 			}
-		} else if (extend != null && __interp.imports.get(extend) == null) {
+		} else if (extend != null && urDad.superClassDecl == null) {
 			__ogInterp.error(ECustom("Invalid Extended Class -> '" + extend + "'"));
 		}
 	}
@@ -163,13 +161,12 @@ class ScriptClassInstance extends BaseScriptClass {
 
 	inline function cacheSuperClassField() {
 		if (needExtend()) {
-			var cls: Class<Dynamic> = cast __interp.imports.get(this.extend);
-			cacheSuperFieldsName = Type.getInstanceFields(cls);
+			cacheSuperFieldsName = Type.getInstanceFields(urDad.superClassDecl);
 		}
 	}
 
 	private inline function needExtend(): Bool {
-		return this.extend != null && (this.__interp.imports.get(this.extend) is Class);
+		return urDad.superClassDecl != null;
 	}
 
 	function parseInstanceField() {
@@ -343,11 +340,10 @@ class ScriptClassInstance extends BaseScriptClass {
 	}
 
 	private function createSuperClassInstance(args: Array<Dynamic>) {
-		var cls: Class<Dynamic> = cast __interp.imports.get(this.extend);
 		if (sureScriptedClass())
-			Type.createInstance(cls, [cast this].concat(args));
+			Type.createInstance(urDad.superClassDecl, [cast this].concat(args));
 		else
-			this.superClass = Type.createInstance(cls, args);
+			this.superClass = Type.createInstance(urDad.superClassDecl, args);
 	}
 
 	public function toString():String {
