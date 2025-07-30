@@ -17,6 +17,7 @@ class MySample extends ScriptedBaseSample {
 
 var os = new ObjectSample();
 var sample = new MySample();
+sample.inputContent({trace: "gp"});
 
 var gs = new GroupSample();
 gs.push(os);

@@ -265,6 +265,11 @@ class Interp {
 		binops.set("<=", function(e1, e2) return me.expr(e1) <= me.expr(e2));
 		binops.set(">", function(e1, e2) return me.expr(e1) > me.expr(e2));
 		binops.set("<", function(e1, e2) return me.expr(e1) < me.expr(e2));
+		binops.set("is", function(e1, e2) {
+			if(Tools.expr(e2).match(EIdent("Class"))) return Std.isOfType(me.expr(e1), Class);
+			if(Tools.expr(e2).match(EIdent("Enum"))) return Std.isOfType(me.expr(e1), Enum);
+			return Std.isOfType(me.expr(e1), me.expr(e2));
+		});
 		binops.set("||", function(e1, e2) return me.expr(e1) == true || me.expr(e2) == true);
 		binops.set("&&", function(e1, e2) return me.expr(e1) == true && me.expr(e2) == true);
 		binops.set("=", assign);

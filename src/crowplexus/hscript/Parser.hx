@@ -156,6 +156,7 @@ class Parser {
 			["|", "&", "^"],
 			["==", "!=", ">", "<", ">=", "<="],
 			["..."],
+			["is"],
 			["&&"],
 			["||"],
 			[
@@ -1384,6 +1385,8 @@ class Parser {
 	function parseExprNext(e1: Expr) {
 		var tk = token();
 		switch (tk) {
+			case TId("is"):
+				return makeBinop("is", e1, parseExpr());
 			case TOp(op):
 				if (op == "->") {
 					// single arg reinterpretation of `f -> e` , `(f) -> e` and `(f:T) -> e`
