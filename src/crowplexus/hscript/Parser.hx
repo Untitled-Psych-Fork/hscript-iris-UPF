@@ -882,9 +882,6 @@ class Parser {
 				}
 				mk(ESwitch(parentExpr, cases, def), p1, tokenMax);
 			case "import":
-				// no need settup in local.
-				if (abductCount > 0)
-					unexpected(TId(id));
 				var path = [getIdent()];
 				var asStr: String = null;
 				var star: Bool = false;
