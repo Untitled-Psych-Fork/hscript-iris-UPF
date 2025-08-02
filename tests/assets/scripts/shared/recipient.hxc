@@ -1,0 +1,6 @@
+import shared.transmitter;
+
+trace("sb: " + transmitter.sb);
+trace("sb changer(+1): " + (++transmitter.sb));
+trace("abab: " + transmitter.abab);
+trace("mk: " + transmitter.mk);

@@ -49,8 +49,8 @@ class DirectorField {
 	public var value: Dynamic;
 	public var type: String;
 	public var const: Bool;
-	/*@:optional*/
 	public var isInline: Bool;
+	@:optional public var isPublic: Bool;
 }
 
 @:structInit
@@ -137,6 +137,11 @@ class Interp {
 	 * 用于限制script enum的创建
 	 */
 	public var allowScriptEnum: Bool;
+
+	/**
+	 * 返回值将会决定是否会颠覆原有的import体系
+	 */
+	public var importHandler:(String, String)->Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -732,7 +737,8 @@ class Interp {
 							value: v,
 							const: isConst,
 							type: "var",
-							isInline: ass != null && ass.contains("inline")
+							isInline: ass != null && ass.contains("inline"),
+							isPublic: ass != null && ass.contains("public")
 						});
 						propertyLinks.set(n, new PropertyAccessor(this, () -> {
 							if (directorFields.get(n) != null)
@@ -753,7 +759,8 @@ class Interp {
 								value: v,
 								const: isConst,
 								type: "var",
-								isInline: ass != null && ass.contains("inline")
+								isInline: ass != null && ass.contains("inline"),
+								isPublic: ass != null && ass.contains("public")
 							});
 						} else {
 							declared.push({n: n, old: locals.get(n)});
@@ -850,6 +857,8 @@ class Interp {
 				returnValue = e == null ? null : expr(e);
 				throw SReturn;
 			case EImport(v, as):
+				if(importHandler != null && importHandler(v, as)) return null;
+
 				final aliasStr = (as != null ? " named " + as : ""); // for errors
 				if (Iris.blocklistImports.contains(v)) {
 					error(ECustom("You cannot add a blacklisted import, for class " + v + aliasStr));
@@ -1265,9 +1274,8 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
-			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
-		}
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		if(o is ISharedScript) return cast(o, ISharedScript).hget(f #if hscriptPos , this.curExpr #end);
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -1286,12 +1294,10 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
-		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) {
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
-			return v;
-		}
-
-		Reflect.setProperty(o, f, v);
+		else if(o is ISharedScript) cast(o, ISharedScript).hset(f, v #if hscriptPos , this.curExpr #end);
+		else Reflect.setProperty(o, f, v);
 		return v;
 	}
 

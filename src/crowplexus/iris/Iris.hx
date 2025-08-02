@@ -9,6 +9,7 @@ import crowplexus.hscript.Expr;
 import crowplexus.iris.ErrorSeverity;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.utils.UsingEntry;
+import crowplexus.hscript.ISharedScript;
 
 using crowplexus.iris.utils.Ansi;
 
@@ -36,7 +37,7 @@ class IrisCall {
  *
  * It is highly recommended that you override this class to add custom defualt variables and such.
 **/
-class Iris {
+class Iris implements ISharedScript {
 	/**
 	 * Map with stored instances of scripts.
 	**/
@@ -237,6 +238,7 @@ class Iris {
 		interp.showPosOnLog = false;
 		interp.allowScriptEnum = this.config.allowEnum;
 		interp.allowScriptClass = this.config.allowClass;
+		interp.importHandler = _importHandler;
 
 		parser.allowTypes = true;
 		parser.allowMetadata = true;
@@ -331,6 +333,28 @@ class Iris {
 			Iris.print(v, pos);
 		}));
 		#end
+	}
+
+	public function hget(name:String, ?e:Expr):Dynamic {
+		if(interp != null && exists(name)) {
+			var field = interp.directorFields.get(name);
+			if(field.isPublic) return field.value;
+			else Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		} else if(interp != null && !exists(name)) {
+			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		}
+
+		return null;
+	}
+
+	public function hset(name:String, value:Dynamic, ?e:Expr):Void {
+		if(interp != null && exists(name)) {
+			var field = interp.directorFields.get(name);
+			if(field.isPublic) field.value = value;
+			else Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		} else if(interp != null && !exists(name)) {
+			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		}
 	}
 
 	/**
@@ -435,6 +459,22 @@ class Iris {
 			Iris.instances.remove(this.name);
 		interp = null;
 		parser = null;
+	}
+
+	@:noCompletion function _importHandler(s:String, alias:String):Bool {
+		var replacer:String = StringTools.replace(s, ".", "/");
+		#if IRIS_DEBUG
+		trace("try to importing script '" + replacer + "'");
+		#end
+		if(Iris.instances.exists(replacer)) {
+			var iris = Iris.instances.get(replacer);
+			if(iris != null) {
+				this.interp.imports.set((alias == null || StringTools.trim(alias) == "" ? Tools.last(replacer.split("/")) : alias), iris);
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

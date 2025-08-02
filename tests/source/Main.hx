@@ -38,6 +38,14 @@ class Main {
 		script.execute();
 	}
 
+	@:testName("import shared variables")
+	public static function test_import_shared() {
+		var script1:HScript = new HScript("shared/transmitter");
+		script1.execute();
+		var script2:HScript = new HScript("shared/recipient");
+		script2.execute();
+	}
+
 	@:testName("is type")
 	public static function test_isType() {
 		var script:HScript = new HScript("isType");
