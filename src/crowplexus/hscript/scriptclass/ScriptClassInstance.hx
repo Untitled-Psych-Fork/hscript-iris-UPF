@@ -242,7 +242,6 @@ class ScriptClassInstance extends BaseScriptClass {
 
 	private function syncParent(s: Interp) {
 		@:privateAccess s.imports = __ogInterp.imports;
-		s.variables.set("trace", __ogInterp.variables.get("trace"));
 	}
 
 	private function parseValDecl(decl: VarDecl) {

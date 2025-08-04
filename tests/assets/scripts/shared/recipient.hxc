@@ -1,6 +1,11 @@
 import shared.transmitter;
+import Math.PI;
+import Std.isOfType as is;
+import samples.ObjectSample;
 
 trace("sb: " + transmitter.sb);
 trace("sb changer(+1): " + (++transmitter.sb));
 trace("abab: " + transmitter.abab);
 trace("mk: " + transmitter.mk);
+trace("Math.PI: " + PI);
+trace("ObjectSample is Class: " + is(new ObjectSample(), ObjectSample));

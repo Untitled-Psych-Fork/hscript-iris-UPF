@@ -23,6 +23,7 @@
 package crowplexus.hscript;
 
 import crowplexus.hscript.proxy.ProxyType;
+import crowplexus.hscript.proxy.ProxyReflect;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
@@ -870,17 +871,33 @@ class Interp {
 					return imports.get(n);
 
 				var c: Dynamic = getOrImportClass(v);
-				/*if (c == null) {
-					var subv = v.substr(0, v.lastIndexOf("."));
-					var psubv = v.substr(v.lastIndexOf(".") + 1)
-					var subc = getOrImportClass(subv);
-					if(subc != null) {
-						
+				if (c == null) {
+					if(v.lastIndexOf(".") > 0) {
+						var subv:String = v.substr(0, v.lastIndexOf("."));
+						var suffix:Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
+						var subc:Dynamic = getOrImportClass(subv);
+						while(subv.lastIndexOf(".") > 0 && subc == null) {
+							suffix.push(subv.substr(subv.lastIndexOf(".") + 1));
+							subv = subv.substr(0, subv.lastIndexOf("."));
+							subc = ProxyType.resolveClass(subv);
+						}
+
+						if(subc != null) {
+							if(suffix.length > 1) return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+
+							var fields:Array<String> = ProxyType.getClassFields(subc).concat(ProxyReflect.fields(subc));
+							var fv:Dynamic = ProxyReflect.getProperty(subc, suffix[0]);
+							if(fields.contains(suffix[0]) || (!(subc is crowplexus.hscript.scriptclass.ScriptClass) && fields.contains("get_" + suffix[0])) || fv != null) {
+								imports.set((as != null ? as : suffix[0]), fv);
+								return null;
+							} else {
+								return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+							}
+						}
+
 					}
-				}*/
-				if (c == null)
 					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
-				else {
+				} else {
 					imports.set(n, c);
 					if (as != null)
 						imports.set(as, c);

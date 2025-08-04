@@ -900,15 +900,10 @@ class Parser {
 					}
 				}
 
-				final asErr = " -> " + path.join(".") + " as " + asStr;
-
 				if (maybe(TId("as"))) {
 					asStr = getIdent();
-					final uppercased: Bool = asStr.charAt(0) == asStr.charAt(0).toUpperCase();
 					if (asStr == null || asStr == "null" || asStr == "")
 						unexpected(TId("as"));
-					if (!uppercased)
-						error(ECustom("Import aliases must begin with an uppercase letter." + asErr), readPos, readPos);
 				}
 				// trace(asStr);
 				/*
@@ -929,7 +924,7 @@ class Parser {
 
 				switch (t) {
 					case TId(id):
-						if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) className = id; else error(ECustom('Class Name "' + id +
+						if (Tools.uppercased(id)) className = id; else error(ECustom('Class Name "' + id +
 							'" Initial capital letters are required'), tokenMin, tokenMax);
 					case _:
 						unexpected(t);
@@ -939,7 +934,7 @@ class Parser {
 					t = token();
 					switch (t) {
 						case TId(id):
-							if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) extendedClassName = id; else error(ECustom('Extended Class Name "' + id
+							if (Tools.uppercased(id)) extendedClassName = id; else error(ECustom('Extended Class Name "' + id
 								+ '" Initial capital letters are required'), tokenMin, tokenMax);
 						case _:
 							unexpected(t);
@@ -951,7 +946,7 @@ class Parser {
 					var tk = token();
 					switch (tk) {
 						case TId(id):
-							if (~/^[A-Z][A-Za-z0-9_]*/.match(id)) {
+							if (Tools.uppercased(id)) {
 								if (!interfacesNames.contains(id))
 									interfacesNames.push(id);
 								else

@@ -161,6 +161,10 @@ class Tools {
 		#end
 	}
 
+	public static inline function uppercased(sb:String, pos:Int = 0):Bool {
+		return sb.charAt(pos) == sb.charAt(pos).toUpperCase();
+	}
+
 	public static function removeInnerClass(name: String): String {
 		var ll = name.lastIndexOf(".");
 		if (name.indexOf(".") != ll) { // checks if there are 2 or more dots

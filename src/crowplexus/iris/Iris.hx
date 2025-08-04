@@ -321,18 +321,6 @@ class Iris implements ISharedScript {
 		/*set("Std", Std);
 					set("StringTools", StringTools);
 					set("Math", Math); */
-		#if hscriptPos
-		// overriding trace for good measure.
-		// if you're a game developer or a fnf modder (hi guys),
-		// you might wanna use Iris.print for your on-screen consoles and such.
-		set("trace", Reflect.makeVarArgs(function(x: Array<Dynamic>) {
-			var pos = this.interp != null ? this.interp.posInfos() : Iris.getDefaultPos(this.name);
-			var v = x.shift();
-			if (x.length > 0)
-				pos.customParams = x;
-			Iris.print(v, pos);
-		}));
-		#end
 	}
 
 	public function hget(name:String, ?e:Expr):Dynamic {

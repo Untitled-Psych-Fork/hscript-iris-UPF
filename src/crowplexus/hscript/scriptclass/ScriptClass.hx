@@ -257,7 +257,6 @@ class ScriptClass extends BaseScriptClass {
 
 	private function syncParent(s: Interp) {
 		@:privateAccess s.imports = ogInterp.imports;
-		s.variables.set("trace", ogInterp.variables.get("trace"));
 	}
 
 	public function toString(): String {
