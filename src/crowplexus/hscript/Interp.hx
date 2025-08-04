@@ -140,6 +140,11 @@ class Interp {
 	public var allowScriptEnum: Bool;
 
 	/**
+	 * 你用了就是这个👍
+	 */
+	public var allowAbstractHappened: Bool;
+
+	/**
 	 * 返回值将会决定是否会颠覆原有的import体系
 	 */
 	public var importHandler:(String, String)->Bool;
@@ -872,7 +877,7 @@ class Interp {
 
 				var c: Dynamic = getOrImportClass(v);
 				if (c == null) {
-					if(v.lastIndexOf(".") > 0) {
+					if(allowAbstractHappened && v.lastIndexOf(".") > 0) {
 						var subv:String = v.substr(0, v.lastIndexOf("."));
 						var suffix:Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
 						var subc:Dynamic = getOrImportClass(subv);

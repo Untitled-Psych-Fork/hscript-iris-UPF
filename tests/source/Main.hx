@@ -40,9 +40,10 @@ class Main {
 
 	@:testName("import shared variables")
 	public static function test_import_shared() {
-		var script1:HScript = new HScript("shared/transmitter");
+		var script1:HScript = new HScript("shared/transmitter", false, false, false, "shared");
 		script1.execute();
-		var script2:HScript = new HScript("shared/recipient");
+		var script2:HScript = new HScript("shared/recipient", false, false, false, "shared");
+		@:privateAccess script2.interp.allowAbstractHappened = true;
 		script2.execute();
 	}
 

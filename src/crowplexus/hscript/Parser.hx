@@ -110,6 +110,7 @@ class Parser {
 		package name, set when using "package;" in your script.
 	 */
 	public var packageName: String = null;
+	var requestedPackageName: String;
 
 	// implementation
 	var input: String;
@@ -195,8 +196,6 @@ class Parser {
 	}
 
 	public inline function error(err, pmin, pmax) {
-		if (sureStaticModifier)
-			sureStaticModifier = false;
 		if (abductCount > 0)
 			abductCount = 0;
 
@@ -212,8 +211,9 @@ class Parser {
 		error(EInvalidChar(c), readPos - 1, readPos - 1);
 	}
 
-	function initParser(origin) {
+	function initParser(origin, ?rp:String) {
 		// line=1 - don't reset line : it might be set manualy
+		if(rp != null) this.requestedPackageName = rp;
 		preprocStack = [];
 		#if hscriptPos
 		this.origin = origin;
@@ -236,16 +236,24 @@ class Parser {
 			idents[identChars.charCodeAt(i)] = true;
 	}
 
-	public function parseString(s: String, ?origin: String = "hscript") {
-		initParser(origin);
+	public function parseString(s: String, ?origin: String = "hscript", ?requestedPack:String) {
+		initParser(origin, requestedPack);
 		input = s;
 		compatibles = [];
 		readPos = 0;
 		var a = new Array();
 		while (true) {
 			var tk = token();
-			if (tk == TEof)
+			if (tk == TEof) {
+				if(this.requestedPackageName != null && StringTools.trim(this.requestedPackageName) != "") {
+					if(packageName == null || (packageName != null && StringTools.trim(packageName) == "")) {
+						error(ECustom("Requested package name -> '" + this.requestedPackageName + "' Failed, due to has not invalid package name"), tokenMin, tokenMax);
+					} else if(packageName != this.requestedPackageName) {
+						error(ECustom("Requested package name -> '" + this.requestedPackageName + "' Failed, Due to the package name -> '" + packageName + "' differs from the requested one"), tokenMin, tokenMax);
+					}
+				}
 				break;
+			}
 			push(tk);
 			parseFullExpr(a);
 		}
@@ -1088,6 +1096,9 @@ class Parser {
 				var path = parsePath();
 				// mk(EPackage(path.join(".")));
 				packageName = path.join(".");
+				if(this.requestedPackageName != null && StringTools.trim(this.requestedPackageName) != "" && packageName != this.requestedPackageName) {
+					error(ECustom("Requested package name -> '" + this.requestedPackageName + "' Failed, Due to the package name -> '" + packageName + "' differs from the requested one"), tokenMin, tokenMax);
+				}
 				mk(EIgnore(false));
 			default:
 				null;
@@ -1696,6 +1707,7 @@ class Parser {
 
 	public function parseModule(content: String, ?origin: String = "hscript") {
 		initParser(origin);
+		
 		input = content;
 		readPos = 0;
 		allowTypes = true;

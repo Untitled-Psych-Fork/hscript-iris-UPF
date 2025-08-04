@@ -243,6 +243,7 @@ class Iris implements ISharedScript {
 		parser.allowTypes = true;
 		parser.allowMetadata = true;
 		parser.allowJSON = true;
+		parser.preprocesorValues = crowplexus.iris.macro.DefineMacro.defines;
 
 		// set variables to the interpreter.
 		if (this.config.autoPreset)
@@ -275,7 +276,7 @@ class Iris implements ISharedScript {
 			expr = parse();
 
 		Iris.instances.set(this.name, this);
-		this.config.packageName = parser.packageName;
+
 		return try {
 			if (expr != null)
 				interp.execute(expr);
@@ -300,7 +301,7 @@ class Iris implements ISharedScript {
 	public function parse(force: Bool = false) {
 		if (force || expr == null) {
 			expr = try {
-				parser.parseString(scriptCode, this.name);
+				parser.parseString(scriptCode, this.name, this.config.requestedPackageName);
 			#if hscriptPos
 			} catch (e:Error) {
 				Iris.error(Printer.errorToString(e, false), cast {fileName: e.origin, lineNumber: parser.line});

@@ -1,3 +1,5 @@
+package shared;
+
 public var sb = 0;
 var abab = "sm";
 public final mk = [1, 2, 3, 4, 5];

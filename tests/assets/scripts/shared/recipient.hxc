@@ -1,3 +1,5 @@
+package shared;
+
 import shared.transmitter;
 import Math.PI;
 import Std.isOfType as is;
