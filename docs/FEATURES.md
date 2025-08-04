@@ -32,10 +32,11 @@
 
 - [x] Classes
 
+- [x] Support importing static functions of class (But its a shit.)
+
 - [x] String Interpolation (It Still has some trouble. If you need to use it. Please Used in `Parser.allowInterpolation`)
 
 # TODO
 ---
 
 - Support direct input of packaging class(or enum)
-- Support importing static functions of class
