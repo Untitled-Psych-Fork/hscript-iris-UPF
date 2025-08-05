@@ -14,4 +14,24 @@ class BaseScriptClass {
 	public function sc_exists(name: String): Bool {
 		return false;
 	}
+
+	public function getFields():Array<String> {
+		return [];
+	}
+
+	public function getFieldsWithOverride():Array<String> {
+		return [];
+	}
+
+	public function getStaticFields():Array<String> {
+		return [];
+	}
+
+	public function getVars():Array<String> {
+		return [];
+	}
+
+	public function getFunctions():Array<String> {
+		return [];
+	}
 }

@@ -4,6 +4,8 @@ import samples.ObjectSample;
 import scripted.ScriptedBaseSample;
 
 class MySample extends ScriptedBaseSample {
+	var sb:Dynamic = null;
+
 	override function working() {
 		if(this.input != null) {
 			output = "Editing Result: " + Std.string(this.input);
@@ -17,7 +19,6 @@ class MySample extends ScriptedBaseSample {
 
 var os = new ObjectSample();
 var sample = new MySample();
-sample.inputContent({trace: "gp"});
 
 var gs = new GroupSample();
 gs.push(os);
@@ -27,3 +28,5 @@ gs.inputContent({trace: "gp"});
 
 gs.working();
 trace(gs.outputs);
+trace("sample is MySample of type: " + (sample is MySample));
+trace("MySample is Class of type: " + (MySample is Class));

@@ -24,6 +24,7 @@ package crowplexus.hscript;
 
 import crowplexus.hscript.proxy.ProxyType;
 import crowplexus.hscript.proxy.ProxyReflect;
+import crowplexus.hscript.proxy.ProxyStd;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
@@ -76,7 +77,7 @@ class Interp {
 
 	private static var scriptClasses: #if haxe3 Map<String,
 		crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
-	private static var scriptEnums: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+	private static var scriptEnums: #if haxe3 Map<String, crowplexus.hscript.scriptenum.ScriptEnum> = new Map() #else Hash<crowplexus.hscript.scriptenum.ScriptEnum> = new Hash() #end;
 
 	/**
 	 * 指定script class是否存在
@@ -111,7 +112,7 @@ class Interp {
 	 * 通过路径获取script enum
 	 * @param path		指定script enum路径
 	 */
-	public static function resolveScriptEnum(path: String): Dynamic {
+	public static function resolveScriptEnum(path: String): crowplexus.hscript.scriptenum.ScriptEnum {
 		if (scriptEnums.exists(path)) {
 			return scriptEnums.get(path);
 		}
@@ -277,9 +278,9 @@ class Interp {
 		binops.set(">", function(e1, e2) return me.expr(e1) > me.expr(e2));
 		binops.set("<", function(e1, e2) return me.expr(e1) < me.expr(e2));
 		binops.set("is", function(e1, e2) {
-			if(Tools.expr(e2).match(EIdent("Class"))) return Std.isOfType(me.expr(e1), Class);
-			if(Tools.expr(e2).match(EIdent("Enum"))) return Std.isOfType(me.expr(e1), Enum);
-			return Std.isOfType(me.expr(e1), me.expr(e2));
+			if(Tools.expr(e2).match(EIdent("Class"))) return ProxyStd.isOfType(me.expr(e1), Class);
+			if(Tools.expr(e2).match(EIdent("Enum"))) return ProxyStd.isOfType(me.expr(e1), Enum);
+			return ProxyStd.isOfType(me.expr(e1), me.expr(e2));
 		});
 		binops.set("||", function(e1, e2) return me.expr(e1) == true || me.expr(e2) == true);
 		binops.set("&&", function(e1, e2) return me.expr(e1) == true && me.expr(e2) == true);
@@ -1104,17 +1105,96 @@ class Interp {
 				return if (expr(econd) == true) expr(e1) else expr(e2);
 			case ESwitch(e, cases, def):
 				var val: Dynamic = expr(e);
+				final isEnum:Bool = Type.typeof(val).match(Type.ValueType.TEnum(_));
 				var match = false;
+
+				var old = duplicate(locals);
+
 				for (c in cases) {
-					for (v in c.values)
-						if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && expr(v) == val) && (c.ifExpr == null || expr(c.ifExpr) == true)) {
-							match = true;
-							break;
+					for (v in c.values) {
+						if(isEnum) {
+							var matchedArgs:Array<Dynamic> = Type.enumParameters(val) ?? [];
+							var realMatch = false;
+							switch(Tools.expr(v)) {
+								case ECall(e, args):
+									switch(Tools.expr(e)) {
+										case EField(e, f, _):
+											fieldDotRet.push(f);
+											var byd = expr(e);
+											if(matchedArgs.length > 0 && byd == Type.getEnum(val) && Type.enumConstructor(val) == f) {
+												realMatch = true;
+												if(args != null) {
+													for(i=>arg in args) {
+														switch(Tools.expr(arg)) {
+															case EIdent(id) if(id != "false" && id != "true" && id != "trace"):
+																if(id != "_") {
+																	locals.set(id, {r: matchedArgs[i], const: false});
+																}
+															case _:
+																if(expr(arg) != matchedArgs[i]) {
+																	realMatch = false;
+																}
+														}
+													}
+												}
+											}
+											fieldDotRet.pop();
+										case _:
+									}
+								case _:
+							}
+							if(realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+								match = true;
+								break;
+							}
+						} else if(val is crowplexus.hscript.scriptenum.ScriptEnumValue) {
+							var matchedArgs:Array<Dynamic> = val.getConstructorArgs();
+							var realMatch = false;
+							switch(Tools.expr(v)) {
+								case ECall(e, args):
+									switch(Tools.expr(e)) {
+										case EField(e, f, _):
+											fieldDotRet.push(f);
+											var byd = expr(e);
+											if(matchedArgs.length > 0 && byd == val.getEnum() && val.name == f) {
+												realMatch = true;
+												if(args != null) {
+													for(i=>arg in args) {
+														switch(Tools.expr(arg)) {
+															case EIdent(id) if(id != "false" && id != "true" && id != "trace"):
+																if(id != "_") {
+																	locals.set(id, {r: matchedArgs[i], const: false});
+																}
+															case _:
+																if(expr(arg) != matchedArgs[i]) {
+																	realMatch = false;
+																}
+														}
+													}
+												}
+											}
+											fieldDotRet.pop();
+										case _:
+									}
+								case _:
+							}
+							if(realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+								match = true;
+								break;
+							}
+						} else {
+							if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && expr(v) == val) && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+								match = true;
+								break;
+							}
 						}
+					}
 					if (match) {
 						val = expr(c.expr);
+						locals = old;
 						break;
 					}
+					locals = old;
 				}
 				if (!match)
 					val = def == null ? null : expr(def);
@@ -1146,11 +1226,11 @@ class Interp {
 					warn(ECustom("Cannot create enum with the same name, it already exists"));
 					return null;
 				}
-				var obj = {};
+				var obj:crowplexus.hscript.scriptenum.ScriptEnum = new crowplexus.hscript.scriptenum.ScriptEnum(enumName, pkg);
 				for (index => field in fields) {
 					switch (field) {
 						case ESimple(name):
-							Reflect.setField(obj, name, new EnumValue(enumName, name, index, null));
+							obj.sm.set(name, new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, null));
 						case EConstructor(name, params):
 							var hasOpt = false, minParams = 0;
 							for (p in params)
@@ -1181,11 +1261,11 @@ class Interp {
 											args2.push(args[pos++]);
 									args = args2;
 								}
-								return new EnumValue(enumName, name, index, args);
+								return new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, args);
 							};
 							var f = Reflect.makeVarArgs(f);
 
-							Reflect.setField(obj, name, f);
+							obj.sm.set(name, f);
 					}
 				}
 				scriptEnums.set(fullPath, obj);

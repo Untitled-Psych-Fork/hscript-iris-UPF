@@ -62,6 +62,14 @@ class Main {
 		}
 	}
 
+	public static function test_switch_case() {
+		var script:HScript = new HScript("switch_case", true);
+		script.set("EnumSample", samples.enums.EnumSample);
+		script.execute();
+
+		script.call("onCreate");
+	}
+
 	public static function main() {
 		Main.init();
 	}

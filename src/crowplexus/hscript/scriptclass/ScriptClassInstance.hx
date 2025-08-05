@@ -124,6 +124,18 @@ class ScriptClassInstance extends BaseScriptClass {
 		return null;
 	}
 
+	public inline override function getFields():Array<String> {
+		return [for(f in this.fields) f.name];
+	}
+
+	public inline override function getVars():Array<String> {
+		return [for(f in this.fields) if(f.kind.match(KVar(_))) f.name];
+	}
+
+	public inline override function getFunctions():Array<String> {
+		return [for(f in this.fields) if(f.kind.match(KFunction(_))) f.name];
+	}
+
 	private function callConstructor() {
 		@:privateAccess
 		if (sc_exists("new")) {

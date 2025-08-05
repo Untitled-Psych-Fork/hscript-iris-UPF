@@ -1,0 +1,70 @@
+function onCreate() {
+	trace("This is source enum");
+	ic(EnumSample.LetterA);
+	ic(EnumSample.LetterB(114514));
+	ic(EnumSample.LetterB("Man! What can I say?"));
+	ic(EnumSample.LetterC(114514, "hello world"));
+	ic(EnumSample.LetterC("emm", "its right"));
+	ic(EnumSample.LetterD("U", "Will", "Died (ye?"));
+
+	Sys.println("");
+
+	trace("This is script enum");
+	isc(ScriptedEnumSample.LetterA);
+	isc(ScriptedEnumSample.LetterB(114514));
+	isc(ScriptedEnumSample.LetterB("Man! What can't I say?"));
+	isc(ScriptedEnumSample.LetterC(114514, "goodbye world"));
+	isc(ScriptedEnumSample.LetterC("emm", "its wrong"));
+	isc(ScriptedEnumSample.LetterD("U", "Wont", "Died (ye?"));
+}
+
+function ic(sb:EnumSample) {
+	Sys.println("match " + Std.string(sb) + "==================");
+	switch(sb) {
+		case EnumSample.LetterB(one) if(one == 114514):
+			trace("Confirmed \"114514\"");
+			trace("Sure that EnumSample.LetterB");
+		case EnumSample.LetterB(one):
+			trace("Sure EnumSample.LetterB's args", one);
+		case EnumSample.LetterC(one, "hello world"):
+			trace("Confirmed \"hello world\"");
+			trace("Sure EnumSample.LetterC's args", one);
+		case EnumSample.LetterC(one, two):
+			trace("Sure EnumSample.LetterC's args", one, two);
+		case EnumSample.LetterD(one, two, three):
+			trace("Sure EnumSample.LetterD's args", one, two, three);
+		case _:
+			trace("Sure that EnumSample.LetterA");
+		//default: 狗都不用（但人用）
+	}
+	Sys.println("match over(Mabout!) ==================\n");
+}
+
+function isc(sb:ScriptedEnumSample) {
+	Sys.println("match " + Std.string(sb) + "==================");
+	switch(sb) {
+		case ScriptedEnumSample.LetterB(one) if(one == 114514):
+			trace("Confirmed \"114514\"");
+			trace("Sure that ScriptedEnumSample.LetterB");
+		case ScriptedEnumSample.LetterB(one):
+			trace("Sure ScriptedEnumSample.LetterB's args", one);
+		case ScriptedEnumSample.LetterC(one, "hello world"):
+			trace("Confirmed \"hello world\"");
+			trace("Sure ScriptedEnumSample.LetterC's args", one);
+		case ScriptedEnumSample.LetterC(one, two):
+			trace("Sure ScriptedEnumSample.LetterC's args", one, two);
+		case ScriptedEnumSample.LetterD(one, two, three):
+			trace("Sure ScriptedEnumSample.LetterD's args", one, two, three);
+		case _:
+			trace("Sure that ScriptedEnumSample.LetterA");
+		//default: 狗都不用（但人用）
+	}
+	Sys.println("match over(Mabout!) ==================\n");
+}
+
+enum ScriptedEnumSample {
+	LetterA;
+	LetterB(one:Dynamic);
+	LetterC(one:Dynamic, two:Dynamic);
+	LetterD(one:Dynamic, two:Dynamic, three:Dynamic);
+}

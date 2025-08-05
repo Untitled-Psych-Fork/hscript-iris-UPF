@@ -1,6 +1,7 @@
 package crowplexus.hscript.proxy;
 
 import crowplexus.hscript.scriptclass.*;
+import crowplexus.hscript.scriptenum.*;
 
 /**
 	The Reflect API is a way to manipulate values dynamically through an
@@ -19,7 +20,11 @@ class ProxyReflect {
 	**/
 	public static inline function hasField(o: Dynamic, field: String): Bool {
 		if (o is BaseScriptClass) {
-			return cast(o, BaseScriptClass).sc_exists(field);
+			return cast(o, BaseScriptClass).getVars().contains(field);
+		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			return o.__sc_standClass.getVars().contains(field);
 		}
 		return Reflect.hasField(o, field);
 	}
@@ -37,7 +42,13 @@ class ProxyReflect {
 	**/
 	public static inline function field(o: Dynamic, field: String): Dynamic {
 		if (o is BaseScriptClass) {
-			return cast(o, BaseScriptClass).sc_get(field);
+			if(cast(o, BaseScriptClass).getVars().contains(field)) return cast(o, BaseScriptClass).sc_get(field);
+			return null;
+		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			if(o.__sc_standClass.getVars().contains(field)) return o.__sc_standClass.sc_get(field);
+			return null;
 		}
 		return Reflect.field(o, field);
 	}
@@ -52,7 +63,15 @@ class ProxyReflect {
 	**/
 	public static inline function setField(o: Dynamic, field: String, value: Dynamic): Void {
 		if (o is BaseScriptClass) {
-			return cast(o, BaseScriptClass).sc_set(field, value);
+			if(cast(o, BaseScriptClass).getVars().contains(field))
+				cast(o, BaseScriptClass).sc_set(field, value);
+			else throw "Invalid field";
+		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			if(o.__sc_standClass.getVars().contains(field))
+				o.__sc_standClass.sc_set(field, value);
+			else throw "Invalid field";
 		}
 		Reflect.setField(o, field, value);
 	}
@@ -70,6 +89,14 @@ class ProxyReflect {
 		if (o is BaseScriptClass) {
 			return cast(o, BaseScriptClass).sc_get(field);
 		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			return o.__sc_standClass.sc_get(field);
+		}
+		@:privateAccess
+		if(o is ScriptEnum) {
+			return cast(o, ScriptEnum).sm.get(field);
+		}
 		return Reflect.getProperty(o, field);
 	}
 
@@ -84,7 +111,13 @@ class ProxyReflect {
 	**/
 	public static inline function setProperty(o: Dynamic, field: String, value: Dynamic): Void {
 		if (o is BaseScriptClass) {
-			return cast(o, BaseScriptClass).sc_set(field, value);
+			cast(o, BaseScriptClass).sc_set(field, value);
+			return;
+		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			o.__sc_standClass.sc_set(field, value);
+			return;
 		}
 		Reflect.setProperty(o, field, value);
 	}
@@ -115,6 +148,13 @@ class ProxyReflect {
 		If `o` is null, the result is unspecified.
 	**/
 	public static inline function fields(o: Dynamic): Array<String> {
+		if (o is BaseScriptClass) {
+			cast(o, BaseScriptClass).getVars();
+		}
+		@:privateAccess
+		if(o is IScriptedClass) {
+			return o.__sc_standClass.getVars();
+		}
 		return Reflect.fields(o);
 	}
 

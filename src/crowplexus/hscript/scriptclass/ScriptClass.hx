@@ -109,6 +109,27 @@ class ScriptClass extends BaseScriptClass {
 		return null;
 	}
 
+	public inline override function getFields():Array<String> {
+		return [for(f in this.fields) if(f.access.contains(AStatic)) f.name];
+	}
+
+	public inline override function getVars():Array<String> {
+		return [for(f in this.fields) if(f.access.contains(AStatic) && f.kind.match(KVar(_))) f.name];
+	}
+
+	public inline override function getFunctions():Array<String> {
+		return [for(f in this.fields) if(f.access.contains(AStatic) && f.kind.match(KFunction(_))) f.name];
+	}
+
+	public inline override function getFieldsWithOverride():Array<String> {
+		if(superClassDecl != null) {
+			var classFields = Type.getInstanceFields(superClassDecl);
+			if(classFields.contains("__sc_standClass")) classFields = classFields.filter(f -> !StringTools.startsWith(f, "__SC_SUPER_") && f != "__sc_standClass");
+			return [for(f in this.fields) if(!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name].concat(classFields);
+		}
+		return [for(f in this.fields) if(!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name];
+	}
+
 	private function parseStaticFields() {
 		@:privateAccess
 		for (field in this.fields) {
