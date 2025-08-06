@@ -358,7 +358,6 @@ class ScriptClassInstance extends BaseScriptClass {
 	}
 
 	public function toString():String {
-		trace("sm");
 		if(sc_exists("toString")) {
 			var result:Dynamic = sc_call("toString");
 			return Std.string(result);

@@ -201,7 +201,7 @@ class Interp {
 
 	var inFunction: Null<String>;
 	var callTP: Bool;
-	var fieldDotRet: Array<String> = [];
+	var fieldDotRet: Array<String> = new Array<String>();
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -508,6 +508,8 @@ class Interp {
 	}
 
 	public function execute(expr: Expr): Dynamic {
+		fieldDotRet = new Array<String>();
+		callTP = false;
 		depth = 0;
 		#if haxe3
 		locals = new Map();
@@ -557,8 +559,6 @@ class Interp {
 	}
 
 	inline function error(e: #if hscriptPos ErrorDef #else Error #end, rethrow = false): Dynamic {
-		fieldDotRet = [];
-		callTP = false;
 		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, curExpr.origin, curExpr.line); #end
 		if (rethrow)
 			this.rethrow(e)
@@ -682,11 +682,10 @@ class Interp {
 			case EIdent(id):
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
-				final re = resolve(id);
-				// 这样做可以使得伪继承class进行“标识包装”，例如可以使`FlxG.state.add(urScriptClass)`生效
-				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				final re:Dynamic = resolve(id);
+				if (re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if (cls.superClass != null)
+					if (cls.superClass is crowplexus.hscript.scriptclass.IScriptedClass)
 						return cls.superClass;
 				}
 				return re;
@@ -1377,6 +1376,7 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		@:privateAccess if(o is crowplexus.hscript.scriptclass.IScriptedClass) return o.__sc_standClass.sc_get(f);
 		if(o is ISharedScript) return cast(o, ISharedScript).hget(f #if hscriptPos , this.curExpr #end);
 		return {
 			#if php
@@ -1396,8 +1396,10 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 
+		@:privateAccess
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
+		else if(o is crowplexus.hscript.scriptclass.IScriptedClass) o.__sc_standClass.sc_set(f, v);
 		else if(o is ISharedScript) cast(o, ISharedScript).hset(f, v #if hscriptPos , this.curExpr #end);
 		else Reflect.setProperty(o, f, v);
 		return v;

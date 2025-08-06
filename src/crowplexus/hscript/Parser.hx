@@ -1087,9 +1087,9 @@ class Parser {
 				if (abductCount > 0)
 					unexpected(TId(id));
 				// ignore package
+				// ？你都package抓空了还给我填空字符串？是个人物了（
 				var tk = token();
 				push(tk);
-				packageName = "";
 				if (tk == TSemicolon)
 					return mk(EIgnore(false));
 
