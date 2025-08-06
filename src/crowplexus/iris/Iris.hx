@@ -323,8 +323,8 @@ class Iris implements ISharedScript {
 					set("Math", Math); */
 	}
 
-	public function hget(name:String, ?e:Expr):Dynamic {
-		if(interp != null && exists(name)) {
+	public function hget(name: String, ?e: Expr): Dynamic {
+		if (interp != null && exists(name)) {
 			var field = interp.directorFields.get(name);
 			@:privateAccess
 			if (interp.propertyLinks.get(name) != null && field.isPublic) {
@@ -335,17 +335,23 @@ class Iris implements ISharedScript {
 					return l.link_getFunc();
 			}
 
-			if(field.isPublic) return field.value;
-			else Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
-		} else if(interp != null && !exists(name)) {
-			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+			if (field.isPublic)
+				return field.value;
+			else
+				Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public",
+					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript",
+						lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		} else if (interp != null && !exists(name)) {
+			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'",
+				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript",
+					lineNumber: 0} #end);
 		}
 
 		return null;
 	}
 
-	public function hset(name:String, value:Dynamic, ?e:Expr):Void {
-		if(interp != null && exists(name)) {
+	public function hset(name: String, value: Dynamic, ?e: Expr): Void {
+		if (interp != null && exists(name)) {
 			var field = interp.directorFields.get(name);
 			@:privateAccess
 			if (interp.propertyLinks.get(name) != null && field.isPublic) {
@@ -357,10 +363,16 @@ class Iris implements ISharedScript {
 				return;
 			}
 
-			if(field.isPublic) field.value = value;
-			else Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
-		} else if(interp != null && !exists(name)) {
-			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'", cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+			if (field.isPublic)
+				field.value = value;
+			else
+				Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public",
+					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript",
+						lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+		} else if (interp != null && !exists(name)) {
+			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'",
+				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript",
+					lineNumber: 0} #end);
 		}
 	}
 
@@ -468,14 +480,14 @@ class Iris implements ISharedScript {
 		parser = null;
 	}
 
-	@:noCompletion function _importHandler(s:String, alias:String):Bool {
-		var replacer:String = StringTools.replace(s, ".", "/");
+	@:noCompletion function _importHandler(s: String, alias: String): Bool {
+		var replacer: String = StringTools.replace(s, ".", "/");
 		#if IRIS_DEBUG
 		trace("try to importing script '" + replacer + "'");
 		#end
-		if(Iris.instances.exists(replacer)) {
+		if (Iris.instances.exists(replacer)) {
 			var iris = Iris.instances.get(replacer);
-			if(iris != null) {
+			if (iris != null) {
 				this.interp.imports.set((alias == null || StringTools.trim(alias) == "" ? Tools.last(replacer.split("/")) : alias), iris);
 				return true;
 			}

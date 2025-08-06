@@ -50,7 +50,7 @@ class ScriptedClassMacro {
 		return fields;
 	}
 
-	private static function buildIDKField(cls:Ref<ClassType>, superCls:Null<{t:Ref<ClassType>, params:Array<Type>}>): Array<Field> {
+	private static function buildIDKField(cls: Ref<ClassType>, superCls: Null<{t: Ref<ClassType>, params: Array<Type>}>): Array<Field> {
 		var fields: Array<Field> = [];
 		var f___e_standClass: Field = {
 			name: "__sc_standClass",
@@ -65,12 +65,12 @@ class ScriptedClassMacro {
 			access: [APublic, AStatic],
 			kind: FFun({
 				args: [],
-				ret: macro: Array<String>,
+				ret: macro : Array<String>,
 				expr: macro {
-					var grp:Array<String> = [];
+					var grp: Array<String> = [];
 					@:privateAccess
-					for(path=>sc in crowplexus.hscript.Interp.scriptClasses) {
-						if(sc.superClassDecl == $i{cls.get().name}) {
+					for (path => sc in crowplexus.hscript.Interp.scriptClasses) {
+						if (sc.superClassDecl == $i{cls.get().name}) {
 							grp.push(path);
 						}
 					}
@@ -90,28 +90,31 @@ class ScriptedClassMacro {
 			access: [APublic, AStatic],
 			kind: FFun({
 				ret: Context.toComplexType(TInst(superCls.t, superCls.params)),
-				args: cast [{
-					name: "className",
-					ret: macro: String
-				},
-				{
-					name: "args",
-					opt: true,
-					ret: macro: Array<Dynamic>
-				}],
+				args: cast [
+					{
+						name: "className",
+						ret: macro : String
+					},
+					{
+						name: "args",
+						opt: true,
+						ret: macro : Array<Dynamic>
+					}
+				],
 				expr: macro {
-					var cls:crowplexus.hscript.scriptclass.ScriptClass = crowplexus.hscript.Interp.resolveScriptClass(className);
-					if(cls != null) {
+					var cls: crowplexus.hscript.scriptclass.ScriptClass = crowplexus.hscript.Interp.resolveScriptClass(className);
+					if (cls != null) {
 						return try {
 							cls.createInstance(args).superClass;
 						}
 						#if hscriptPos
-						catch(err:crowplexus.hscript.Expr.Error) {
+						catch (err:crowplexus.hscript.Expr.Error) {
 							crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
 							null;
 						}
 						#end
-						catch(e) {
+					catch (e)
+						{
 							Sys.println(Std.string(e));
 							null;
 						}
@@ -241,19 +244,21 @@ class ScriptedClassMacro {
 					expr: if (fn.doThisReturn) {
 						macro {
 							@:privateAccess
-							if (__sc_standClass != null
-								&& __sc_standClass.overrides.contains(${{expr: EConst(CString(fname)), pos: Context.currentPos()}
+							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
+								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
-								var result:Dynamic = try {
+								var result: Dynamic = try {
 									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
 								}
 								#if hscriptPos
-								catch(err:crowplexus.hscript.Expr.Error) {
-									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
+								catch (err:crowplexus.hscript.Expr.Error) {
+									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false),
+										cast {fileName: err.origin, lineNumber: err.line});
 									null;
 								}
 								#end
-								catch(e) {
+							catch (e)
+								{
 									Sys.println(Std.string(e));
 									null;
 								}
@@ -264,18 +269,20 @@ class ScriptedClassMacro {
 					} else {
 						macro {
 							@:privateAccess
-							if (__sc_standClass != null
-								&& __sc_standClass.overrides.contains(${{expr: EConst(CString(fname)), pos: Context.currentPos()}
+							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
+								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
 								try {
 									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
 								}
 								#if hscriptPos
-								catch(err:crowplexus.hscript.Expr.Error) {
-									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
+								catch (err:crowplexus.hscript.Expr.Error) {
+									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false),
+										cast {fileName: err.origin, lineNumber: err.line});
 								}
 								#end
-								catch(e) {
+							catch (e)
+								{
 									Sys.println(Std.string(e));
 								}
 							} else

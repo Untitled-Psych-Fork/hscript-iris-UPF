@@ -279,8 +279,8 @@ class Bytes {
 			case CSuper:
 				CSuper;
 			case CEReg:
-				var r:String = doDecodeString();
-				var opt:Null<String> = null;
+				var r: String = doDecodeString();
+				var opt: Null<String> = null;
 				doDecodeCond(function() {
 					opt = doDecodeString();
 				});
@@ -379,14 +379,14 @@ class Bytes {
 		// doEncode(a.t);
 	}
 
-	function doEncodeCond(cond:Bool, func:Void->Void) {
+	function doEncodeCond(cond: Bool, func: Void->Void) {
 		doEncodeBool(cond);
-		if(cond)
+		if (cond)
 			func();
 	}
 
-	function doDecodeCond(func:Void->Void) {
-		if(doDecodeBool()) {
+	function doDecodeCond(func: Void->Void) {
+		if (doDecodeBool()) {
 			func();
 		}
 	}
@@ -425,7 +425,7 @@ class Bytes {
 				});
 				doEncodeCond(s != null && s.length > 0, function() {
 					doEncodeInt(s.length);
-					for(ac in s) {
+					for (ac in s) {
 						doEncodeString(ac);
 					}
 				});
@@ -495,7 +495,7 @@ class Bytes {
 				});
 				doEncodeCond(s != null && s.length > 0, function() {
 					doEncodeInt(s.length);
-					for(ac in s) {
+					for (ac in s) {
 						doEncodeString(ac);
 					}
 				});
@@ -631,11 +631,11 @@ class Bytes {
 				var v = doDecodeString();
 				var depth = doDecodeInt();
 				var e = doDecode();
-				var c:Null<Bool> = null;
-				var acs:Array<String> = null;
+				var c: Null<Bool> = null;
+				var acs: Array<String> = null;
 
-				var getter:Null<String> = null;
-				var setter:Null<String> = null;
+				var getter: Null<String> = null;
+				var setter: Null<String> = null;
 
 				doDecodeCond(function() {
 					getter = doDecodeString();
@@ -649,7 +649,7 @@ class Bytes {
 				doDecodeCond(function() {
 					var length = doDecodeInt();
 					acs = [];
-					for(i in 0...length) {
+					for (i in 0...length) {
 						acs.push(doDecodeString());
 					}
 				});
@@ -701,17 +701,19 @@ class Bytes {
 				EContinue;
 			case EFunction:
 				var params = new Array<Argument>();
-				var acs:Array<String> = null;
+				var acs: Array<String> = null;
 				for (i in 0...bin.get(pin++))
 					params.push(doDecodeArg());
 				var e = doDecode();
 				var depth = doDecodeInt();
-				var name:Null<String> = null;
-				doDecodeCond(function() {name = doDecodeString();});
+				var name: Null<String> = null;
+				doDecodeCond(function() {
+					name = doDecodeString();
+				});
 				doDecodeCond(function() {
 					var length = doDecodeInt();
 					acs = [];
-					for(i in 0...length) {
+					for (i in 0...length) {
 						acs.push(doDecodeString());
 					}
 				});

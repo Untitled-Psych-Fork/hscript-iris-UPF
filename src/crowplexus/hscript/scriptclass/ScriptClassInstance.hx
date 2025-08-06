@@ -124,16 +124,16 @@ class ScriptClassInstance extends BaseScriptClass {
 		return null;
 	}
 
-	public inline override function getFields():Array<String> {
-		return [for(f in this.fields) f.name];
+	public inline override function getFields(): Array<String> {
+		return [for (f in this.fields) f.name];
 	}
 
-	public inline override function getVars():Array<String> {
-		return [for(f in this.fields) if(f.kind.match(KVar(_))) f.name];
+	public inline override function getVars(): Array<String> {
+		return [for (f in this.fields) if (f.kind.match(KVar(_))) f.name];
 	}
 
-	public inline override function getFunctions():Array<String> {
-		return [for(f in this.fields) if(f.kind.match(KFunction(_))) f.name];
+	public inline override function getFunctions(): Array<String> {
+		return [for (f in this.fields) if (f.kind.match(KFunction(_))) f.name];
 	}
 
 	private function callConstructor() {
@@ -284,7 +284,7 @@ class ScriptClassInstance extends BaseScriptClass {
 			}
 			var func = function(args: Array<Dynamic>) {
 				if (args.length < minParams) {
-						__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name
+					__ogInterp.error(ECustom("Invalid number of parameters. Got " + args.length + ", required " + minParams + " for function '" + this.name
 						+ "." + name + "'"));
 				}
 
@@ -321,9 +321,11 @@ class ScriptClassInstance extends BaseScriptClass {
 				var r = null;
 				var oldDecl = __interp.declared.length;
 
-				final of:Null<String> = __interp.inFunction;
-				if(name != null) __interp.inFunction = name;
-				else __interp.inFunction = "(*unamed)";
+				final of: Null<String> = __interp.inFunction;
+				if (name != null)
+					__interp.inFunction = name;
+				else
+					__interp.inFunction = "(*unamed)";
 				if (__interp.inTry)
 					try {
 						r = __interp.exprReturn(decl.expr, false);
@@ -357,9 +359,9 @@ class ScriptClassInstance extends BaseScriptClass {
 			this.superClass = Type.createInstance(urDad.superClassDecl, args);
 	}
 
-	public function toString():String {
-		if(sc_exists("toString")) {
-			var result:Dynamic = sc_call("toString");
+	public function toString(): String {
+		if (sc_exists("toString")) {
+			var result: Dynamic = sc_call("toString");
 			return Std.string(result);
 		}
 

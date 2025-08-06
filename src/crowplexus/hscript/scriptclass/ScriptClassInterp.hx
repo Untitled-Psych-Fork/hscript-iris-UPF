@@ -22,9 +22,12 @@ class ScriptClassInterp extends Interp {
 				return Reflect.getProperty(o, "__SC_SUPER_" + f);
 			}
 		}
-		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
-		@:privateAccess if(o is crowplexus.hscript.scriptclass.IScriptedClass) return o.__sc_standClass.sc_get(f);
-		if(o is ISharedScript) return cast(o, ISharedScript).hget(f #if hscriptPos , this.curExpr #end);
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
+			return o.__sc_standClass.sc_get(f);
+		if (o is ISharedScript)
+			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -145,11 +148,13 @@ class ScriptClassInterp extends Interp {
 
 	override function super_call(args: Array<Dynamic>): Dynamic {
 		if (scriptClass.needExtend()) {
-			if(this.inFunction == "new") {
-				if(scriptClass.superClass == null) {
+			if (this.inFunction == "new") {
+				if (scriptClass.superClass == null) {
 					scriptClass.createSuperClassInstance(args);
-				} else warn(ECustom("Cannot reuse to call 'super()'."));
-			} else error(ECustom("Cannot call 'super()' outside of constructor"));
+				} else
+					warn(ECustom("Cannot reuse to call 'super()'."));
+			} else
+				error(ECustom("Cannot call 'super()' outside of constructor"));
 		} else
 			error(ECustom("Current class does not have a super"));
 		return null;

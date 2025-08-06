@@ -6,9 +6,9 @@ class ScriptEnumValue {
 	public var index: Int;
 	public var args: Array<Dynamic>;
 
-	var parent:ScriptEnum;
+	var parent: ScriptEnum;
 
-	public function new(parent:ScriptEnum, enumName: String, name: String, index: Int, ?args: Array<Dynamic>) {
+	public function new(parent: ScriptEnum, enumName: String, name: String, index: Int, ?args: Array<Dynamic>) {
 		this.parent = parent;
 		this.enumName = enumName;
 		this.name = name;
@@ -16,7 +16,7 @@ class ScriptEnumValue {
 		this.args = args;
 	}
 
-	public function getEnum():Dynamic {
+	public function getEnum(): Dynamic {
 		return parent;
 	}
 

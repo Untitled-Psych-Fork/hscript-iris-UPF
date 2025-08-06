@@ -35,14 +35,15 @@ class IrisConfig {
 	 * @param requestedPackageName		Idk
 	 * @param localBlocklist	List of classes or enums that cannot be used within this particular script
 	**/
-	public function new(name: String, allowEnum: Bool = false, allowClass: Bool = false, autoRun: Bool = true, autoPreset: Bool = true, ?requestedPackageName:String,
-			?localBlocklist: Array<String>) {
+	public function new(name: String, allowEnum: Bool = false, allowClass: Bool = false, autoRun: Bool = true, autoPreset: Bool = true,
+			?requestedPackageName: String, ?localBlocklist: Array<String>) {
 		this.name = name;
 		this.allowEnum = allowEnum;
 		this.allowClass = allowClass;
 		this.autoRun = autoRun;
 		this.autoPreset = autoPreset;
-		if(requestedPackageName != null) this.requestedPackageName = requestedPackageName;
+		if (requestedPackageName != null)
+			this.requestedPackageName = requestedPackageName;
 		if (localBlocklist != null)
 			this.localBlocklist = localBlocklist;
 	}

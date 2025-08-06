@@ -77,7 +77,8 @@ class Interp {
 
 	private static var scriptClasses: #if haxe3 Map<String,
 		crowplexus.hscript.scriptclass.ScriptClass> = new Map() #else Hash<crowplexus.hscript.scriptclass.ScriptClass> = new Hash() #end;
-	private static var scriptEnums: #if haxe3 Map<String, crowplexus.hscript.scriptenum.ScriptEnum> = new Map() #else Hash<crowplexus.hscript.scriptenum.ScriptEnum> = new Hash() #end;
+	private static var scriptEnums: #if haxe3 Map<String,
+		crowplexus.hscript.scriptenum.ScriptEnum> = new Map() #else Hash<crowplexus.hscript.scriptenum.ScriptEnum> = new Hash() #end;
 
 	/**
 	 * 指定script class是否存在
@@ -148,7 +149,7 @@ class Interp {
 	/**
 	 * 返回值将会决定是否会颠覆原有的import体系
 	 */
-	public var importHandler:(String, String)->Bool;
+	public var importHandler: (String, String) -> Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -278,8 +279,10 @@ class Interp {
 		binops.set(">", function(e1, e2) return me.expr(e1) > me.expr(e2));
 		binops.set("<", function(e1, e2) return me.expr(e1) < me.expr(e2));
 		binops.set("is", function(e1, e2) {
-			if(Tools.expr(e2).match(EIdent("Class"))) return ProxyStd.isOfType(me.expr(e1), Class);
-			if(Tools.expr(e2).match(EIdent("Enum"))) return ProxyStd.isOfType(me.expr(e1), Enum);
+			if (Tools.expr(e2).match(EIdent("Class")))
+				return ProxyStd.isOfType(me.expr(e1), Class);
+			if (Tools.expr(e2).match(EIdent("Enum")))
+				return ProxyStd.isOfType(me.expr(e1), Enum);
 			return ProxyStd.isOfType(me.expr(e1), me.expr(e2));
 		});
 		binops.set("||", function(e1, e2) return me.expr(e1) == true || me.expr(e2) == true);
@@ -682,7 +685,7 @@ class Interp {
 			case EIdent(id):
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
-				final re:Dynamic = resolve(id);
+				final re: Dynamic = resolve(id);
 				if (re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
 					if (cls.superClass is crowplexus.hscript.scriptclass.IScriptedClass)
@@ -863,7 +866,8 @@ class Interp {
 				returnValue = e == null ? null : expr(e);
 				throw SReturn;
 			case EImport(v, as):
-				if(importHandler != null && importHandler(v, as)) return null;
+				if (importHandler != null && importHandler(v, as))
+					return null;
 
 				final aliasStr = (as != null ? " named " + as : ""); // for errors
 				if (Iris.blocklistImports.contains(v)) {
@@ -877,29 +881,31 @@ class Interp {
 
 				var c: Dynamic = getOrImportClass(v);
 				if (c == null) {
-					if(allowAbstractHappened && v.lastIndexOf(".") > 0) {
-						var subv:String = v.substr(0, v.lastIndexOf("."));
-						var suffix:Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
-						var subc:Dynamic = getOrImportClass(subv);
-						while(subv.lastIndexOf(".") > 0 && subc == null) {
+					if (allowAbstractHappened && v.lastIndexOf(".") > 0) {
+						var subv: String = v.substr(0, v.lastIndexOf("."));
+						var suffix: Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
+						var subc: Dynamic = getOrImportClass(subv);
+						while (subv.lastIndexOf(".") > 0 && subc == null) {
 							suffix.push(subv.substr(subv.lastIndexOf(".") + 1));
 							subv = subv.substr(0, subv.lastIndexOf("."));
 							subc = ProxyType.resolveClass(subv);
 						}
 
-						if(subc != null) {
-							if(suffix.length > 1) return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+						if (subc != null) {
+							if (suffix.length > 1)
+								return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
 
-							var fields:Array<String> = ProxyType.getClassFields(subc).concat(ProxyReflect.fields(subc));
-							var fv:Dynamic = ProxyReflect.getProperty(subc, suffix[0]);
-							if(fields.contains(suffix[0]) || (!(subc is crowplexus.hscript.scriptclass.ScriptClass) && fields.contains("get_" + suffix[0])) || fv != null) {
+							var fields: Array<String> = ProxyType.getClassFields(subc).concat(ProxyReflect.fields(subc));
+							var fv: Dynamic = ProxyReflect.getProperty(subc, suffix[0]);
+							if (fields.contains(suffix[0])
+								|| (!(subc is crowplexus.hscript.scriptclass.ScriptClass) && fields.contains("get_" + suffix[0]))
+								|| fv != null) {
 								imports.set((as != null ? as : suffix[0]), fv);
 								return null;
 							} else {
 								return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
 							}
 						}
-
 					}
 					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
 				} else {
@@ -951,9 +957,11 @@ class Interp {
 					var r = null;
 					var oldDecl = declared.length;
 
-					final of:Null<String> = inFunction;
-					if(name != null) inFunction = name;
-					else inFunction = "(*unamed)";
+					final of: Null<String> = inFunction;
+					if (name != null)
+						inFunction = name;
+					else
+						inFunction = "(*unamed)";
 					if (inTry)
 						try {
 							r = me.exprReturn(fexpr, false);
@@ -1104,33 +1112,33 @@ class Interp {
 				return if (expr(econd) == true) expr(e1) else expr(e2);
 			case ESwitch(e, cases, def):
 				var val: Dynamic = expr(e);
-				final isEnum:Bool = Type.typeof(val).match(Type.ValueType.TEnum(_));
+				final isEnum: Bool = Type.typeof(val).match(Type.ValueType.TEnum(_));
 				var match = false;
 
 				var old = duplicate(locals);
 
 				for (c in cases) {
 					for (v in c.values) {
-						if(isEnum) {
-							var matchedArgs:Array<Dynamic> = Type.enumParameters(val) ?? [];
+						if (isEnum) {
+							var matchedArgs: Array<Dynamic> = Type.enumParameters(val) ?? [];
 							var realMatch = false;
-							switch(Tools.expr(v)) {
+							switch (Tools.expr(v)) {
 								case ECall(e, args):
-									switch(Tools.expr(e)) {
+									switch (Tools.expr(e)) {
 										case EField(e, f, _):
 											fieldDotRet.push(f);
 											var byd = expr(e);
-											if(matchedArgs.length > 0 && byd == Type.getEnum(val) && Type.enumConstructor(val) == f) {
+											if (matchedArgs.length > 0 && byd == Type.getEnum(val) && Type.enumConstructor(val) == f) {
 												realMatch = true;
-												if(args != null) {
-													for(i=>arg in args) {
-														switch(Tools.expr(arg)) {
-															case EIdent(id) if(id != "false" && id != "true" && id != "trace"):
-																if(id != "_") {
+												if (args != null) {
+													for (i => arg in args) {
+														switch (Tools.expr(arg)) {
+															case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+																if (id != "_") {
 																	locals.set(id, {r: matchedArgs[i], const: false});
 																}
 															case _:
-																if(expr(arg) != matchedArgs[i]) {
+																if (expr(arg) != matchedArgs[i]) {
 																	realMatch = false;
 																}
 														}
@@ -1142,30 +1150,30 @@ class Interp {
 									}
 								case _:
 							}
-							if(realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+							if (realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
 								match = true;
 								break;
 							}
-						} else if(val is crowplexus.hscript.scriptenum.ScriptEnumValue) {
-							var matchedArgs:Array<Dynamic> = val.getConstructorArgs();
+						} else if (val is crowplexus.hscript.scriptenum.ScriptEnumValue) {
+							var matchedArgs: Array<Dynamic> = val.getConstructorArgs();
 							var realMatch = false;
-							switch(Tools.expr(v)) {
+							switch (Tools.expr(v)) {
 								case ECall(e, args):
-									switch(Tools.expr(e)) {
+									switch (Tools.expr(e)) {
 										case EField(e, f, _):
 											fieldDotRet.push(f);
 											var byd = expr(e);
-											if(matchedArgs.length > 0 && byd == val.getEnum() && val.name == f) {
+											if (matchedArgs.length > 0 && byd == val.getEnum() && val.name == f) {
 												realMatch = true;
-												if(args != null) {
-													for(i=>arg in args) {
-														switch(Tools.expr(arg)) {
-															case EIdent(id) if(id != "false" && id != "true" && id != "trace"):
-																if(id != "_") {
+												if (args != null) {
+													for (i => arg in args) {
+														switch (Tools.expr(arg)) {
+															case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+																if (id != "_") {
 																	locals.set(id, {r: matchedArgs[i], const: false});
 																}
 															case _:
-																if(expr(arg) != matchedArgs[i]) {
+																if (expr(arg) != matchedArgs[i]) {
 																	realMatch = false;
 																}
 														}
@@ -1177,12 +1185,13 @@ class Interp {
 									}
 								case _:
 							}
-							if(realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+							if (realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
 								match = true;
 								break;
 							}
 						} else {
-							if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && expr(v) == val) && (c.ifExpr == null || expr(c.ifExpr) == true)) {
+							if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && expr(v) == val)
+								&& (c.ifExpr == null || expr(c.ifExpr) == true)) {
 								match = true;
 								break;
 							}
@@ -1225,7 +1234,7 @@ class Interp {
 					warn(ECustom("Cannot create enum with the same name, it already exists"));
 					return null;
 				}
-				var obj:crowplexus.hscript.scriptenum.ScriptEnum = new crowplexus.hscript.scriptenum.ScriptEnum(enumName, pkg);
+				var obj: crowplexus.hscript.scriptenum.ScriptEnum = new crowplexus.hscript.scriptenum.ScriptEnum(enumName, pkg);
 				for (index => field in fields) {
 					switch (field) {
 						case ESimple(name):
@@ -1375,9 +1384,12 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
-		@:privateAccess if(o is crowplexus.hscript.scriptclass.IScriptedClass) return o.__sc_standClass.sc_get(f);
-		if(o is ISharedScript) return cast(o, ISharedScript).hget(f #if hscriptPos , this.curExpr #end);
+		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
+			return o.__sc_standClass.sc_get(f);
+		if (o is ISharedScript)
+			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
 			#if php
 			// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -1395,13 +1407,15 @@ class Interp {
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-
 		@:privateAccess
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
-		else if(o is crowplexus.hscript.scriptclass.IScriptedClass) o.__sc_standClass.sc_set(f, v);
-		else if(o is ISharedScript) cast(o, ISharedScript).hset(f, v #if hscriptPos , this.curExpr #end);
-		else Reflect.setProperty(o, f, v);
+		else if (o is crowplexus.hscript.scriptclass.IScriptedClass)
+			o.__sc_standClass.sc_set(f, v);
+		else if (o is ISharedScript)
+			cast(o, ISharedScript).hset(f, v #if hscriptPos, this.curExpr #end);
+		else
+			Reflect.setProperty(o, f, v);
 		return v;
 	}
 
@@ -1515,8 +1529,9 @@ class Interp {
 		}
 
 		return {
-			final func:Dynamic = get(o, f);
-			if(!Reflect.isFunction(func)) error(ECustom("Invalid Function -> '" + f + "'"));
+			final func: Dynamic = get(o, f);
+			if (!Reflect.isFunction(func))
+				error(ECustom("Invalid Function -> '" + f + "'"));
 			call(o, func, args);
 		}
 	}

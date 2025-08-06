@@ -1359,7 +1359,6 @@ class Parser {
 	tokenMax = (this.char < 0) ? readPos - 1 : readPos - 2;
 	return t;
 	} function _token() {
-
 	#else
 	if (!tokens.isEmpty())
 		return tokens.pop();
