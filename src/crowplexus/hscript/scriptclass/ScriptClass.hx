@@ -30,9 +30,9 @@ class ScriptClass extends BaseScriptClass {
 		this.ogInterp = ogInterp;
 		this.name = clsName;
 		this.extend = extendCls;
-		if(extendCls != null && ogInterp.imports.get(extendCls) is Class) {
+		if (extendCls != null && ogInterp.imports.get(extendCls) is Class) {
 			this.superClassDecl = cast ogInterp.imports.get(extendCls);
-		} else if(extendCls != null && !(ogInterp.imports.get(extendCls) is Class)) {
+		} else if (extendCls != null && !(ogInterp.imports.get(extendCls) is Class)) {
 			@:privateAccess ogInterp.error(ECustom("Invalid Extend Class -> '" + extendCls + "'"));
 		}
 		this.packages = pkg;
@@ -109,25 +109,34 @@ class ScriptClass extends BaseScriptClass {
 		return null;
 	}
 
-	public inline override function getFields():Array<String> {
-		return [for(f in this.fields) if(f.access.contains(AStatic)) f.name];
+	public inline override function getFields(): Array<String> {
+		return [for (f in this.fields) if (f.access.contains(AStatic)) f.name];
 	}
 
-	public inline override function getVars():Array<String> {
-		return [for(f in this.fields) if(f.access.contains(AStatic) && f.kind.match(KVar(_))) f.name];
+	public inline override function getVars(): Array<String> {
+		return [
+			for (f in this.fields) if (f.access.contains(AStatic) && f.kind.match(KVar(_))) f.name
+		];
 	}
 
-	public inline override function getFunctions():Array<String> {
-		return [for(f in this.fields) if(f.access.contains(AStatic) && f.kind.match(KFunction(_))) f.name];
+	public inline override function getFunctions(): Array<String> {
+		return [
+			for (f in this.fields) if (f.access.contains(AStatic) && f.kind.match(KFunction(_))) f.name
+		];
 	}
 
-	public inline override function getFieldsWithOverride():Array<String> {
-		if(superClassDecl != null) {
+	public inline override function getFieldsWithOverride(): Array<String> {
+		if (superClassDecl != null) {
 			var classFields = Type.getInstanceFields(superClassDecl);
-			if(classFields.contains("__sc_standClass")) classFields = classFields.filter(f -> !StringTools.startsWith(f, "__SC_SUPER_") && f != "__sc_standClass");
-			return [for(f in this.fields) if(!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name].concat(classFields);
+			if (classFields.contains("__sc_standClass"))
+				classFields = classFields.filter(f -> !StringTools.startsWith(f, "__SC_SUPER_") && f != "__sc_standClass");
+			return [
+				for (f in this.fields) if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
+			].concat(classFields);
 		}
-		return [for(f in this.fields) if(!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name];
+		return [
+			for (f in this.fields) if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
+		];
 	}
 
 	private function parseStaticFields() {
@@ -244,9 +253,11 @@ class ScriptClass extends BaseScriptClass {
 
 				var r = null;
 				var oldDecl = staticInterp.declared.length;
-				final of:Null<String> = staticInterp.inFunction;
-				if(name != null) staticInterp.inFunction = name;
-				else staticInterp.inFunction = "(*unamed)";
+				final of: Null<String> = staticInterp.inFunction;
+				if (name != null)
+					staticInterp.inFunction = name;
+				else
+					staticInterp.inFunction = "(*unamed)";
 				if (staticInterp.inTry)
 					try {
 						r = staticInterp.exprReturn(decl.expr, false);

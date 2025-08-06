@@ -161,7 +161,7 @@ class Tools {
 		#end
 	}
 
-	public static inline function uppercased(sb:String, pos:Int = 0):Bool {
+	public static inline function uppercased(sb: String, pos: Int = 0): Bool {
 		return sb.charAt(pos) == sb.charAt(pos).toUpperCase();
 	}
 

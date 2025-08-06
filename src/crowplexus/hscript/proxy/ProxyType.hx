@@ -17,7 +17,7 @@ class ProxyType {
 		if (o is ScriptClassInstance) {
 			@:privateAccess return cast(o, ScriptClassInstance).urDad;
 		}
-		@:privateAccess if(o is IScriptedClass) {
+		@:privateAccess if (o is IScriptedClass) {
 			return o.__sc_standClass.urDad;
 		}
 		return Type.getClass(o);
@@ -34,7 +34,7 @@ class ProxyType {
 		In general, type parameter information cannot be obtained at runtime.
 	**/
 	public inline static function getEnum(o: Dynamic): Dynamic {
-		@:privateAccess if(o is ScriptEnumValue) {
+		@:privateAccess if (o is ScriptEnumValue) {
 			return cast(o, ScriptEnumValue).parent;
 		}
 		return Type.getEnum(o);
@@ -91,7 +91,8 @@ class ProxyType {
 		The enum name does not include any type parameters.
 	**/
 	public inline static function getEnumName(e: Dynamic): String {
-		if(e is ScriptEnum) return e.fullPath;
+		if (e is ScriptEnum)
+			return e.fullPath;
 		return Type.getEnumName(e);
 	}
 
@@ -182,9 +183,10 @@ class ProxyType {
 		invalid type, the result is unspecified.
 	**/
 	public inline static function createEnum(e: Dynamic, constr: String, ?params: Array<Dynamic>): Dynamic {
-		@:privateAccess if(e is ScriptEnum) {
-			var byd:Dynamic = cast(e, ScriptEnum).sm.get(constr);
-			if(Reflect.isFunction(byd)) return Reflect.callMethod(null, byd, params ?? []);
+		@:privateAccess if (e is ScriptEnum) {
+			var byd: Dynamic = cast(e, ScriptEnum).sm.get(constr);
+			if (Reflect.isFunction(byd))
+				return Reflect.callMethod(null, byd, params ?? []);
 			return byd;
 		}
 		return Type.createEnum(e, constr, params);
@@ -203,13 +205,14 @@ class ProxyType {
 		invalid type, the result is unspecified.
 	**/
 	public inline static function createEnumIndex(e: Dynamic, index: Int, ?params: Array<Dynamic>): Dynamic {
-		@:privateAccess if(e is ScriptEnum) {
-			if(index > 0) {
-				var i:Int = -1;
-				for(v in cast(e, ScriptEnum).sm) {
-					if((++i) == index) {
-						var byd:Dynamic = v;
-						if(Reflect.isFunction(byd)) return Reflect.callMethod(null, v, params ?? []);
+		@:privateAccess if (e is ScriptEnum) {
+			if (index > 0) {
+				var i: Int = -1;
+				for (v in cast(e, ScriptEnum).sm) {
+					if ((++i) == index) {
+						var byd: Dynamic = v;
+						if (Reflect.isFunction(byd))
+							return Reflect.callMethod(null, v, params ?? []);
 						return byd;
 					}
 				}
@@ -262,8 +265,8 @@ class ProxyType {
 		If `e` is null, the result is unspecified.
 	**/
 	public inline static function getEnumConstructs(e: Enum<Dynamic>): Array<String> {
-		@:privateAccess if(e is ScriptEnum) {
-			return [for(f in cast(e, ScriptEnum).sm.keys()) f];
+		@:privateAccess if (e is ScriptEnum) {
+			return [for (f in cast(e, ScriptEnum).sm.keys()) f];
 		}
 		return Type.getEnumConstructs(e);
 	}

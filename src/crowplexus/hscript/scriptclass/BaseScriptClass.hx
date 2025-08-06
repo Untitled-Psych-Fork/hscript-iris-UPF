@@ -15,23 +15,23 @@ class BaseScriptClass {
 		return false;
 	}
 
-	public function getFields():Array<String> {
+	public function getFields(): Array<String> {
 		return [];
 	}
 
-	public function getFieldsWithOverride():Array<String> {
+	public function getFieldsWithOverride(): Array<String> {
 		return [];
 	}
 
-	public function getStaticFields():Array<String> {
+	public function getStaticFields(): Array<String> {
 		return [];
 	}
 
-	public function getVars():Array<String> {
+	public function getVars(): Array<String> {
 		return [];
 	}
 
-	public function getFunctions():Array<String> {
+	public function getFunctions(): Array<String> {
 		return [];
 	}
 }

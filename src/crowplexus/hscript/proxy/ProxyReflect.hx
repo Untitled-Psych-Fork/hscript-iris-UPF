@@ -23,7 +23,7 @@ class ProxyReflect {
 			return cast(o, BaseScriptClass).getVars().contains(field);
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
+		if (o is IScriptedClass) {
 			return o.__sc_standClass.getVars().contains(field);
 		}
 		return Reflect.hasField(o, field);
@@ -42,12 +42,14 @@ class ProxyReflect {
 	**/
 	public static inline function field(o: Dynamic, field: String): Dynamic {
 		if (o is BaseScriptClass) {
-			if(cast(o, BaseScriptClass).getVars().contains(field)) return cast(o, BaseScriptClass).sc_get(field);
+			if (cast(o, BaseScriptClass).getVars().contains(field))
+				return cast(o, BaseScriptClass).sc_get(field);
 			return null;
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
-			if(o.__sc_standClass.getVars().contains(field)) return o.__sc_standClass.sc_get(field);
+		if (o is IScriptedClass) {
+			if (o.__sc_standClass.getVars().contains(field))
+				return o.__sc_standClass.sc_get(field);
 			return null;
 		}
 		return Reflect.field(o, field);
@@ -63,15 +65,17 @@ class ProxyReflect {
 	**/
 	public static inline function setField(o: Dynamic, field: String, value: Dynamic): Void {
 		if (o is BaseScriptClass) {
-			if(cast(o, BaseScriptClass).getVars().contains(field))
+			if (cast(o, BaseScriptClass).getVars().contains(field))
 				cast(o, BaseScriptClass).sc_set(field, value);
-			else throw "Invalid field";
+			else
+				throw "Invalid field";
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
-			if(o.__sc_standClass.getVars().contains(field))
+		if (o is IScriptedClass) {
+			if (o.__sc_standClass.getVars().contains(field))
 				o.__sc_standClass.sc_set(field, value);
-			else throw "Invalid field";
+			else
+				throw "Invalid field";
 		}
 		Reflect.setField(o, field, value);
 	}
@@ -90,11 +94,11 @@ class ProxyReflect {
 			return cast(o, BaseScriptClass).sc_get(field);
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
+		if (o is IScriptedClass) {
 			return o.__sc_standClass.sc_get(field);
 		}
 		@:privateAccess
-		if(o is ScriptEnum) {
+		if (o is ScriptEnum) {
 			return cast(o, ScriptEnum).sm.get(field);
 		}
 		return Reflect.getProperty(o, field);
@@ -115,7 +119,7 @@ class ProxyReflect {
 			return;
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
+		if (o is IScriptedClass) {
 			o.__sc_standClass.sc_set(field, value);
 			return;
 		}
@@ -152,7 +156,7 @@ class ProxyReflect {
 			cast(o, BaseScriptClass).getVars();
 		}
 		@:privateAccess
-		if(o is IScriptedClass) {
+		if (o is IScriptedClass) {
 			return o.__sc_standClass.getVars();
 		}
 		return Reflect.fields(o);
