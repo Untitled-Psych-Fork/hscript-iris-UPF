@@ -23,6 +23,7 @@ class ScriptClassInterp extends Interp {
 			}
 		}
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass) return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+		@:privateAccess if(o is crowplexus.hscript.scriptclass.IScriptedClass) return o.__sc_standClass.sc_get(f);
 		if(o is ISharedScript) return cast(o, ISharedScript).hget(f #if hscriptPos , this.curExpr #end);
 		return {
 			#if php
