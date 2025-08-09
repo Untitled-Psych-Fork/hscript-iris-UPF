@@ -97,7 +97,6 @@ class Interp {
 			return scriptClasses.get(path);
 		}
 
-		throw "Invalid class path -> " + path;
 		return null;
 	}
 
@@ -118,7 +117,6 @@ class Interp {
 			return scriptEnums.get(path);
 		}
 
-		throw "Invalid enum path -> " + path;
 		return null;
 	}
 
@@ -203,6 +201,7 @@ class Interp {
 	var inFunction: Null<String>;
 	var callTP: Bool;
 	var fieldDotRet: Array<String> = new Array<String>();
+	var inVar: Null<String>;
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -686,10 +685,11 @@ class Interp {
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
 				final re: Dynamic = resolve(id);
-				if (re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if (cls.superClass is crowplexus.hscript.scriptclass.IScriptedClass)
+					if(cls.superClass != null) {
 						return cls.superClass;
+					}
 				}
 				return re;
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
@@ -698,7 +698,10 @@ class Interp {
 				if (setter == null)
 					setter = "default";
 
+				final ov = inVar;
+				inVar = n;
 				var v = (v == null ? null : expr(v));
+				inVar = ov;
 				if (ass != null && ass.contains("inline")) {
 					var tv = Type.typeof(v);
 					switch (tv) {
@@ -1069,10 +1072,14 @@ class Interp {
 				}
 			case ENew(cl, params):
 				var a = new Array();
-				for (e in params)
+				final ov = inVar;
+				inVar = null;
+				for (e in params) {
 					a.push(expr(e));
+				}
+				inVar = ov;
 				var re = cnew(cl, a);
-				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if (inVar == null && fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
 					if (cls.superClass != null)
 						return cls.superClass;
