@@ -115,13 +115,15 @@ class ScriptClass extends BaseScriptClass {
 
 	public inline override function getVars(): Array<String> {
 		return [
-			for (f in this.fields) if (f.access.contains(AStatic) && f.kind.match(KVar(_))) f.name
+			for (f in this.fields)
+				if (f.access.contains(AStatic) && f.kind.match(KVar(_))) f.name
 		];
 	}
 
 	public inline override function getFunctions(): Array<String> {
 		return [
-			for (f in this.fields) if (f.access.contains(AStatic) && f.kind.match(KFunction(_))) f.name
+			for (f in this.fields)
+				if (f.access.contains(AStatic) && f.kind.match(KFunction(_))) f.name
 		];
 	}
 
@@ -131,11 +133,13 @@ class ScriptClass extends BaseScriptClass {
 			if (classFields.contains("__sc_standClass"))
 				classFields = classFields.filter(f -> !StringTools.startsWith(f, "__SC_SUPER_") && f != "__sc_standClass");
 			return [
-				for (f in this.fields) if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
+				for (f in this.fields)
+					if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
 			].concat(classFields);
 		}
 		return [
-			for (f in this.fields) if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
+			for (f in this.fields)
+				if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
 		];
 	}
 

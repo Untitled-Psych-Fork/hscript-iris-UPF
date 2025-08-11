@@ -687,7 +687,7 @@ class Interp {
 				final re: Dynamic = resolve(id);
 				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if(cls.superClass != null) {
+					if (cls.superClass != null) {
 						return cls.superClass;
 					}
 				}

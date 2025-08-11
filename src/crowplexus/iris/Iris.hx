@@ -339,12 +339,16 @@ class Iris implements ISharedScript {
 				return field.value;
 			else
 				Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public",
-					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript",
-						lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {
+						fileName: "hscript",
+						lineNumber: 0
+					}) #else {fileName: "hscript", lineNumber: 0} #end);
 		} else if (interp != null && !exists(name)) {
 			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'",
-				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript",
-					lineNumber: 0} #end);
+				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {
+					fileName: "hscript",
+					lineNumber: 0
+				} #end);
 		}
 
 		return null;
@@ -367,12 +371,16 @@ class Iris implements ISharedScript {
 				field.value = value;
 			else
 				Iris.warn("This Script -> '" + this.name + "', its field -> '" + name + "' is not public",
-					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript",
-						lineNumber: 0}) #else {fileName: "hscript", lineNumber: 0} #end);
+					cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {
+						fileName: "hscript",
+						lineNumber: 0
+					}) #else {fileName: "hscript", lineNumber: 0} #end);
 		} else if (interp != null && !exists(name)) {
 			Iris.warn("This Script -> '" + this.name + "' has not field -> '" + name + "'",
-				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {fileName: "hscript",
-					lineNumber: 0} #end);
+				cast #if hscriptPos (e != null ? {fileName: e.origin, lineNumber: e.line} : {fileName: "hscript", lineNumber: 0}) #else {
+					fileName: "hscript",
+					lineNumber: 0
+				} #end);
 		}
 	}
 
