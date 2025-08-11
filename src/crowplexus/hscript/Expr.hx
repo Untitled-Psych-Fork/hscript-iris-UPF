@@ -64,7 +64,7 @@ enum Expr
 {
 	EIgnore(skipSemicolon:Bool);
 	EConst(c:Const);
-	EIdent(v:String, ?stuffix:String);
+	EIdent(v:String);
 	EImport(v:String, as:String);
 	EVar(n:String, depth:Int, ?t:CType, ?e:Expr, ?getter:String, ?setter:String, ?isConst:Bool, ?access:Array<String>);
 	EParent(e:Expr);

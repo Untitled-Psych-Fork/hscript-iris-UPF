@@ -1,0 +1,7 @@
+var sb = {
+	x: 0,
+	y: 0
+};
+
+sb.x = sb.y = 10;
+trace(sb);
