@@ -1127,11 +1127,32 @@ class Interp {
 				for (c in cases) {
 					for (v in c.values) {
 						if (isEnum) {
+							final matchedRootEnum:Enum<Dynamic> = Type.getEnum(val);
+							final matchedRoot:Dynamic = Reflect.getProperty(matchedRootEnum, Type.enumConstructor(val));
 							var matchedArgs: Array<Dynamic> = Type.enumParameters(val) ?? [];
 							var realMatch = false;
 							switch (Tools.expr(v)) {
 								case ECall(e, args):
-									switch (Tools.expr(e)) {
+									var ne:Dynamic = expr(e);
+									final kindFunction:Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
+									if(matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
+										realMatch = true;
+										if (args != null) {
+											for (i => arg in args) {
+												switch (Tools.expr(arg)) {
+													case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+														if (id != "_") {
+															locals.set(id, {r: matchedArgs[i], const: false});
+														}
+													case _:
+														if (expr(arg) != matchedArgs[i]) {
+															realMatch = false;
+														}
+												}
+											}
+										}
+									}
+									/**switch (Tools.expr(e)) {
 										case EField(e, f, _):
 											fieldDotRet.push(f);
 											var byd = expr(e);
@@ -1154,7 +1175,7 @@ class Interp {
 											}
 											fieldDotRet.pop();
 										case _:
-									}
+									}*/
 								case _:
 							}
 							if (realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
@@ -1162,11 +1183,32 @@ class Interp {
 								break;
 							}
 						} else if (val is crowplexus.hscript.scriptenum.ScriptEnumValue) {
+							final matchedRootEnum:crowplexus.hscript.scriptenum.ScriptEnum = ProxyType.getEnum(val);
+							final matchedRoot:Dynamic = ProxyReflect.getProperty(matchedRootEnum, ProxyType.enumConstructor(val));
 							var matchedArgs: Array<Dynamic> = val.getConstructorArgs();
 							var realMatch = false;
 							switch (Tools.expr(v)) {
 								case ECall(e, args):
-									switch (Tools.expr(e)) {
+									var ne:Dynamic = expr(e);
+									final kindFunction:Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
+									if(matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
+										realMatch = true;
+										if (args != null) {
+											for (i => arg in args) {
+												switch (Tools.expr(arg)) {
+													case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+														if (id != "_") {
+															locals.set(id, {r: matchedArgs[i], const: false});
+														}
+													case _:
+														if (expr(arg) != matchedArgs[i]) {
+															realMatch = false;
+														}
+												}
+											}
+										}
+									}
+									/**switch (Tools.expr(e)) {
 										case EField(e, f, _):
 											fieldDotRet.push(f);
 											var byd = expr(e);
@@ -1189,7 +1231,7 @@ class Interp {
 											}
 											fieldDotRet.pop();
 										case _:
-									}
+									}*/
 								case _:
 							}
 							if (realMatch && (c.ifExpr == null || expr(c.ifExpr) == true)) {
