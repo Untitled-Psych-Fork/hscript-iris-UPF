@@ -33,6 +33,7 @@ class ScriptEnumValue {
 		return this.args != null ? this.args : [];
 
 	public function compare(other: ScriptEnumValue): Bool {
+		if(this.parent != other.parent) return false;
 		if (enumName != other.enumName || name != other.name)
 			return false;
 		if (args == null && other.args == null)

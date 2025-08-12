@@ -1145,7 +1145,7 @@ class Interp {
 															locals.set(id, {r: matchedArgs[i], const: false});
 														}
 													case _:
-														if (expr(arg) != matchedArgs[i]) {
+														if (!Tools.valueSwitchMatch(expr(arg), matchedArgs[i])) {
 															realMatch = false;
 														}
 												}
@@ -1201,7 +1201,7 @@ class Interp {
 															locals.set(id, {r: matchedArgs[i], const: false});
 														}
 													case _:
-														if (expr(arg) != matchedArgs[i]) {
+														if (!Tools.valueSwitchMatch(expr(arg), matchedArgs[i])) {
 															realMatch = false;
 														}
 												}
@@ -1239,7 +1239,7 @@ class Interp {
 								break;
 							}
 						} else {
-							if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && expr(v) == val)
+							if ((!Type.enumEq(Tools.expr(v), EIdent("_")) && Tools.valueSwitchMatch(expr(v), val))
 								&& (c.ifExpr == null || expr(c.ifExpr) == true)) {
 								match = true;
 								break;

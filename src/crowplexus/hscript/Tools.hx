@@ -23,7 +23,9 @@
 package crowplexus.hscript;
 
 import crowplexus.hscript.Expr;
+import crowplexus.hscript.scriptenum.ScriptEnumValue;
 import crowplexus.hscript.proxy.ProxyType;
+import Type.ValueType;
 
 class Tools {
 	public static function iter(e: Expr, f: Expr->Void) {
@@ -195,6 +197,47 @@ class Tools {
 			}
 		}
 		return c;
+	}
+
+	//SwitchMatch过法写意居权
+	public static function valueSwitchMatch(val1:Dynamic, val2:Dynamic):Bool {
+		return switch([Type.typeof(val1), Type.typeof(val2)]) {
+			case [TClass(Array), TClass(Array)]:
+				var pass:Bool = false;
+				if(val1.length == val2.length) {
+					pass = true;
+					var i = -1;
+					while(i++ < val1.length - 1) {
+						final bean = valueSwitchMatch(val1[i], val2[i]);
+						if(!bean) {
+							pass = false;
+							break;
+						}
+					}
+				}
+				pass;
+			case [TClass(ScriptEnumValue), TClass(ScriptEnumValue)]:
+				ProxyType.enumEq(val1, val2);
+			case [TObject, TObject]:
+				var pass:Bool = false;
+				if(valueSwitchMatch(Reflect.fields(val1), Reflect.fields(val2))) {
+					pass = true;
+					for(field in Reflect.fields(val1)) {
+						final bean = valueSwitchMatch(Reflect.getProperty(val1, field), Reflect.getProperty(val2, field));
+						if(!bean) {
+							pass = false;
+							break;
+						}
+					}
+				}
+				pass;
+			case [TFunction, TFunction]:
+				Reflect.compareMethods(val1, val2);
+			case [TEnum(a), TEnum(b)] if(a == b):
+				Type.enumEq(val1, val2);
+			case _:
+				val1 == val2;
+		};
 	}
 
 	public inline static function last(arr: Array<String>): String
