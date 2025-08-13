@@ -7,15 +7,14 @@ import sys.FileSystem;
 import haxe.io.Path;
 
 class Assets {
-	private static var rootPath: String;
-	private static var scriptExtensions: Array<String>;
+	private static var rootPath:String;
+	private static var scriptExtensions:Array<String>;
 
-	public static function init(?rootPath: String, ?supportScriptExtensions: Array<String>) {
-		if (supportScriptExtensions == null)
-			supportScriptExtensions = [];
+	public static function init(?rootPath:String, ?supportScriptExtensions:Array<String>) {
+		if(supportScriptExtensions == null) supportScriptExtensions = [];
 		Assets.scriptExtensions = supportScriptExtensions;
 		#if sys
-		Assets.rootPath = Path.addTrailingSlash(if (rootPath != null) rootPath else Sys.getCwd());
+		Assets.rootPath = Path.addTrailingSlash(if(rootPath != null) rootPath else Sys.getCwd());
 		#else
 		error("Assets is not supported in the current version");
 		#end
@@ -25,17 +24,16 @@ class Assets {
 		#end
 	}
 
-	public static function getScript(path: String): Null<String> {
+	public static function getScript(path:String):Null<String> {
 		path = Path.withoutExtension(path);
-		for (ext in scriptExtensions) {
+		for(ext in scriptExtensions) {
 			var realPath = "scripts/" + path + "." + ext;
-			if (exists(realPath))
-				return getContent(realPath);
+			if(exists(realPath)) return getContent(realPath);
 		}
 		return null;
 	}
 
-	public static function exists(path: String): Bool {
+	public static function exists(path:String):Bool {
 		#if sys
 		return FileSystem.exists(rootPath + path);
 		#else
@@ -44,14 +42,14 @@ class Assets {
 		#end
 	}
 
-	public static function getContent(path: String): Null<String> {
+	public static function getContent(path:String):Null<String> {
 		#if IRIS_DEBUG
 		trace("Assets:getContent():Loading Path: " + path);
 		#end
 		#if sys
 		return try {
 			File.getContent(rootPath + path);
-		} catch (e) {
+		} catch(e) {
 			error(Std.string(e));
 			null;
 		}
@@ -61,11 +59,11 @@ class Assets {
 		#end
 	}
 
-	private inline static function error(str: String) {
+	private inline static function error(str:String) {
 		throw str;
 	}
 
-	private inline static function warn(str: String) {
+	private inline static function warn(str:String) {
 		#if sys
 		Sys.println(str);
 		#end

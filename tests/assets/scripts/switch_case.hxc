@@ -1,24 +1,77 @@
 function onCreate() {
+	trace("This is Array");
+	a_ic(["smgfxyjq", "smgfxyjq", "smgffckysf"]);
+	a_ic(["Fuck ur Mom", "lgmm"]);
+	a_ic(["Do you dare to eat my bird", "lgmm"]);
+	a_ic([1, 5, 4, 0]);
+	a_ic(["nope"]);
+
+	Sys.println("");
+
+	trace("This is Object");
+	o_ic({x: 0, y: 1});
+	o_ic({x: 114514, y: 1919810});
+	o_ic({x: 1300, y: 14});
+	o_ic({x: 451, y: 69});
+	o_ic({many: "money", low: "poor"});
+	o_ic({az: "这是平常，跟我一个狗屎样"});
+
+	Sys.println("");
+
 	trace("This is source enum");
-	ic(EnumSample.LetterA);
-	ic(EnumSample.LetterB(114514));
-	ic(EnumSample.LetterB("Man! What can I say?"));
-	ic(EnumSample.LetterC(114514, "hello world"));
-	ic(EnumSample.LetterC("emm", "its right"));
-	ic(EnumSample.LetterD("U", "Will", "Died (ye?"));
+	e_ic(EnumSample.LetterA);
+	e_ic(EnumSample.LetterB(114514));
+	e_ic(EnumSample.LetterB("Man! What can I say?"));
+	e_ic(EnumSample.LetterC(114514, "hello world"));
+	e_ic(EnumSample.LetterC("emm", "its right"));
+	e_ic(EnumSample.LetterD("U", "Will", "Died (ye?"));
 
 	Sys.println("");
 
 	trace("This is script enum");
-	isc(ScriptedEnumSample.LetterA);
-	isc(ScriptedEnumSample.LetterB(114514));
-	isc(ScriptedEnumSample.LetterB("Man! What can't I say?"));
-	isc(ScriptedEnumSample.LetterC(114514, "goodbye world"));
-	isc(ScriptedEnumSample.LetterC("emm", "its wrong"));
-	isc(ScriptedEnumSample.LetterD("U", "Wont", "Died (ye?"));
+	e_isc(ScriptedEnumSample.LetterA);
+	e_isc(ScriptedEnumSample.LetterB(114514));
+	e_isc(ScriptedEnumSample.LetterB("Man! What can't I say?"));
+	e_isc(ScriptedEnumSample.LetterC(114514, "goodbye world"));
+	e_isc(ScriptedEnumSample.LetterC("emm", "its wrong"));
+	e_isc(ScriptedEnumSample.LetterD("U", "Wont", "Died (ye?"));
 }
 
-function ic(sb:EnumSample) {
+function o_ic(sb:Dynamic) {
+	Sys.println("match " + Std.string(sb) + "==================");
+	switch(sb) {
+		case {many: many, low: "poor"}:
+			trace("You Are Too Poor, Sure What is Many: " + many);
+		case {x: x, y: y} if(x + y == 1314):
+			trace("1314？不孕不育差不多哈哈哈！");
+		case {x: x, y: y} if(x + y == 520):
+			trace("520？到底是哪个愚昧到透彻的烂泥砖想到这个败坏名声的谐音[xswl.gif]");
+		case {x: x, y: y}:
+			trace("Sure Point That: " + "(" + "x: " + x + " | " + "y: " + y + ")");
+		case {x: x, y: y, z: z}:
+			trace("Sure Point3D That: " + "(" + "x: " + x + " | " + "y: " + y + " | " + "z: " + z + ")");
+		case _:
+			trace("Sure Default That: " + sb);
+	}
+	Sys.println("match over(Mabout!) ==================\n");
+}
+
+function a_ic(sb:Array<Dynamic>) {
+	Sys.println("match " + Std.string(sb) + "==================");
+	switch(sb) {
+		case ["smgfxyjq", "smgfxyjq", "smgffckysf"]:
+			trace("zyn x nightmare: \"smgfxyjq, smgfxyjq, smgffckysf\"");
+		case [loserHua, "lgmm"]:
+			trace("Click Enter Text: \"" + loserHua + ", lgmm.\"");
+		case [a, b, c, d] if(a + b + c + d == 10):
+			trace("Add result sure that 10");
+		case _:
+			trace("Sure Default That: " + sb);
+	}
+	Sys.println("match over(Mabout!) ==================\n");
+}
+
+function e_ic(sb:EnumSample) {
 	Sys.println("match " + Std.string(sb) + "==================");
 	switch(sb) {
 		case EnumSample.LetterB(one) if(one == 114514):
@@ -40,7 +93,7 @@ function ic(sb:EnumSample) {
 	Sys.println("match over(Mabout!) ==================\n");
 }
 
-function isc(sb:ScriptedEnumSample) {
+function e_isc(sb:ScriptedEnumSample) {
 	Sys.println("match " + Std.string(sb) + "==================");
 	switch(sb) {
 		case ScriptedEnumSample.LetterB(one) if(one == 114514):

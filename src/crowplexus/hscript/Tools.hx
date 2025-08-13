@@ -218,7 +218,7 @@ class Tools {
 				pass;
 			case [TClass(ScriptEnumValue), TClass(ScriptEnumValue)]:
 				ProxyType.enumEq(val1, val2);
-			case [TObject, TObject]:
+			case [TObject, TObject] if(!(val1 is Class || val1 is Enum) && !(val2 is Class || val2 is Enum)):
 				var pass:Bool = false;
 				if(valueSwitchMatch(Reflect.fields(val1), Reflect.fields(val2))) {
 					pass = true;
