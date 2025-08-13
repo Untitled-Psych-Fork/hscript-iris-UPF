@@ -1125,8 +1125,8 @@ class Interp {
 
 				for (c in cases) {
 					for (v in c.values) {
-						var cond:Bool = stackPatternMatch(val, v, c, typeof);
-						if(cond) {
+						var cond: Bool = stackPatternMatch(val, v, c, typeof);
+						if (cond) {
 							match = true;
 							break;
 						}
@@ -1220,18 +1220,18 @@ class Interp {
 		return null;
 	}
 
-	private function stackPatternMatch(matched:Dynamic, match:Expr, casse:SwitchCase, typeof:Type.ValueType):Bool {
+	private function stackPatternMatch(matched: Dynamic, match: Expr, casse: SwitchCase, typeof: Type.ValueType): Bool {
 		var realMatch = false;
-		switch(typeof) {
+		switch (typeof) {
 			case Type.ValueType.TClass(Array):
-				switch(Tools.expr(match)) {
+				switch (Tools.expr(match)) {
 					case EArrayDecl(es):
-						if(es.length == matched.length) {
+						if (es.length == matched.length) {
 							realMatch = true;
-							for(i=>e in es) {
-								switch(Tools.expr(e)) {
+							for (i => e in es) {
+								switch (Tools.expr(e)) {
 									case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
-										if(id != "_") {
+										if (id != "_") {
 											locals.set(id, {r: matched[i], const: false});
 										}
 									case _:
@@ -1246,19 +1246,19 @@ class Interp {
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
 				}
-			case Type.ValueType.TObject if(!(matched is Class || matched is Enum)):
-				var fields:Array<String> = Reflect.fields(matched);
+			case Type.ValueType.TObject if (!(matched is Class || matched is Enum)):
+				var fields: Array<String> = Reflect.fields(matched);
 				fields.sort((o, t) -> Reflect.compare(o, t));
-				switch(Tools.expr(match)) {
+				switch (Tools.expr(match)) {
 					case EObject(obs):
-						final mfields:Array<String> = [for(ob in obs) ob.name];
+						final mfields: Array<String> = [for (ob in obs) ob.name];
 						mfields.sort((o, t) -> Reflect.compare(o, t));
-						if(Tools.valueSwitchMatch(fields, mfields)) {
+						if (Tools.valueSwitchMatch(fields, mfields)) {
 							realMatch = true;
-							for(ob in obs) {
-								switch(Tools.expr(ob.e)) {
+							for (ob in obs) {
+								switch (Tools.expr(ob.e)) {
 									case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
-										if(id != "_") {
+										if (id != "_") {
 											locals.set(id, {r: Reflect.getProperty(matched, ob.name), const: false});
 										}
 									case _:
@@ -1274,14 +1274,14 @@ class Interp {
 					return true;
 				}
 			case Type.ValueType.TEnum(_):
-				final matchedRootEnum:Enum<Dynamic> = Type.getEnum(matched);
-				final matchedRoot:Dynamic = Reflect.getProperty(matchedRootEnum, Type.enumConstructor(matched));
+				final matchedRootEnum: Enum<Dynamic> = Type.getEnum(matched);
+				final matchedRoot: Dynamic = Reflect.getProperty(matchedRootEnum, Type.enumConstructor(matched));
 				var matchedArgs: Array<Dynamic> = Type.enumParameters(matched) ?? [];
 				switch (Tools.expr(match)) {
 					case ECall(e, args):
-						var ne:Dynamic = expr(e);
-						final kindFunction:Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
-						if(matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
+						var ne: Dynamic = expr(e);
+						final kindFunction: Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
+						if (matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
 							realMatch = true;
 							if (args != null) {
 								for (i => arg in args) {
@@ -1304,15 +1304,15 @@ class Interp {
 					return true;
 				}
 			case Type.ValueType.TClass(crowplexus.hscript.scriptenum.ScriptEnumValue):
-				final matchedRootEnum:crowplexus.hscript.scriptenum.ScriptEnum = ProxyType.getEnum(matched);
-				final matchedRoot:Dynamic = ProxyReflect.getProperty(matchedRootEnum, ProxyType.enumConstructor(matched));
+				final matchedRootEnum: crowplexus.hscript.scriptenum.ScriptEnum = ProxyType.getEnum(matched);
+				final matchedRoot: Dynamic = ProxyReflect.getProperty(matchedRootEnum, ProxyType.enumConstructor(matched));
 				var matchedArgs: Array<Dynamic> = matched.getConstructorArgs();
 				var realMatch = false;
 				switch (Tools.expr(match)) {
 					case ECall(e, args):
-						var ne:Dynamic = expr(e);
-						final kindFunction:Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
-						if(matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
+						var ne: Dynamic = expr(e);
+						final kindFunction: Bool = (Reflect.isFunction(ne) && Reflect.isFunction(matchedRoot));
+						if (matchedArgs.length > 0 && kindFunction && Reflect.compareMethods(ne, matchedRoot)) {
 							realMatch = true;
 							if (args != null) {
 								for (i => arg in args) {
@@ -1335,7 +1335,9 @@ class Interp {
 					return true;
 				}
 			default:
-				if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched)) && (casse.ifExpr == null || expr(casse.ifExpr) == true)) return true;
+				if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
+					&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
+					return true;
 		}
 
 		return false;
