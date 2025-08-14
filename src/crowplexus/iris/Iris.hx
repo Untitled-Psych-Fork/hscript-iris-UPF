@@ -43,18 +43,16 @@ class Iris implements ISharedScript {
 	public static var instances: StringMap<Iris> = new StringMap<Iris>();
 
 	public static var registeredUsingEntries: Array<UsingEntry> = [
-		new UsingEntry("StringTools", function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
+		new UsingEntry("StringTools", function(o: Dynamic, f: String, args: Array<Dynamic>): IrisCall {
 			if (f == "isEof") // has @:noUsing
 				return null;
 			switch (Type.typeof(o)) {
 				case TInt if (f == "hex"):
-					return StringTools.hex(o, args[0]);
+					return {funName: f, signature: o, returnValue: StringTools.hex(o, args[0])};
 				case TClass(String):
-					if (Reflect.hasField(StringTools, f)) {
-						var field = Reflect.field(StringTools, f);
-						if (Reflect.isFunction(field)) {
-							return Reflect.callMethod(StringTools, field, [o].concat(args));
-						}
+					var field:Dynamic = Reflect.getProperty(StringTools, f);
+					if (Reflect.isFunction(field)) {
+						return {funName: f, signature: o, returnValue: Reflect.callMethod(StringTools, field, [o].concat(args))};
 					}
 				default:
 			}
@@ -62,12 +60,9 @@ class Iris implements ISharedScript {
 		}),
 		new UsingEntry("Lambda", function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
 			if (Tools.isIterable(o)) {
-				// TODO: Check if the values are Iterable<T>
-				if (Reflect.hasField(Lambda, f)) {
-					var field = Reflect.field(Lambda, f);
-					if (Reflect.isFunction(field)) {
-						return Reflect.callMethod(Lambda, field, [o].concat(args));
-					}
+				var field = Reflect.getProperty(Lambda, f);
+				if (Reflect.isFunction(field)) {
+					return {funName: f, signature: o, returnValue: Reflect.callMethod(Lambda, field, [o].concat(args))};
 				}
 			}
 			return null;

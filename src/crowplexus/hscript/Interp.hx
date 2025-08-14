@@ -203,6 +203,9 @@ class Interp {
 	var fieldDotRet: Array<String> = new Array<String>();
 	var inVar: Null<String>;
 
+	//当字段为_时将会识别此值并捕获它（
+	var added_value: Dynamic = null;
+
 	#if hscriptPos
 	var curExpr: Expr;
 	#end
@@ -510,6 +513,7 @@ class Interp {
 	}
 
 	public function execute(expr: Expr): Dynamic {
+		added_value = null;
 		fieldDotRet = new Array<String>();
 		callTP = false;
 		depth = 0;
@@ -682,6 +686,7 @@ class Interp {
 					#end
 				}
 			case EIdent(id):
+				if(id == "_" && added_value != null) return added_value;
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
 				final re: Dynamic = resolve(id);
@@ -1220,7 +1225,7 @@ class Interp {
 		return null;
 	}
 
-	private function stackPatternMatch(matched: Dynamic, match: Expr, casse: SwitchCase, typeof: Type.ValueType): Bool {
+	private function stackPatternMatch(matched: Dynamic, match: Expr, casse: SwitchCase, typeof: Type.ValueType, ?inArg:Bool = false): Bool {
 		var realMatch = false;
 		switch (typeof) {
 			case Type.ValueType.TClass(Array):
@@ -1235,13 +1240,16 @@ class Interp {
 											locals.set(id, {r: matched[i], const: false});
 										}
 									case _:
-										if (!Tools.valueSwitchMatch(expr(e), matched[i])) {
+										if(!stackPatternMatch(matched[i], e, casse, Type.typeof(matched[i]), true)) {
 											realMatch = false;
 										}
 								}
 							}
 						}
 					case _:
+						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
+							return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1262,13 +1270,17 @@ class Interp {
 											locals.set(id, {r: Reflect.getProperty(matched, ob.name), const: false});
 										}
 									case _:
-										if (!Tools.valueSwitchMatch(expr(ob.e), Reflect.getProperty(matched, ob.name))) {
+										var med:Dynamic = Reflect.getProperty(matched, ob.name);
+										if (!stackPatternMatch(med, ob.e, casse, Type.typeof(med), true)) {
 											realMatch = false;
 										}
 								}
 							}
 						}
 					case _:
+						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
+							return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1291,7 +1303,7 @@ class Interp {
 												locals.set(id, {r: matchedArgs[i], const: false});
 											}
 										case _:
-											if (!Tools.valueSwitchMatch(expr(arg), matchedArgs[i])) {
+											if (!stackPatternMatch(matchedArgs[i], arg, casse, Type.typeof(matchedArgs[i]), true)) {
 												realMatch = false;
 											}
 									}
@@ -1299,6 +1311,9 @@ class Interp {
 							}
 						}
 					case _:
+						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
+							return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1322,7 +1337,7 @@ class Interp {
 												locals.set(id, {r: matchedArgs[i], const: false});
 											}
 										case _:
-											if (!Tools.valueSwitchMatch(expr(arg), matchedArgs[i])) {
+											if (!stackPatternMatch(matchedArgs[i], arg, casse, Type.typeof(matchedArgs[i]), true)) {
 												realMatch = false;
 											}
 									}
@@ -1330,11 +1345,29 @@ class Interp {
 							}
 						}
 					case _:
+						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
+							return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
 				}
 			default:
+				if(inArg) switch(Tools.expr(match)) {
+					case EBinop("=>", e1, e2):
+						added_value = matched;
+						var value:Dynamic = expr(e1);
+						added_value = null;
+						switch(Tools.expr(e2)) {
+							case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+								if(id != "_") {
+									locals.set(id, {r: value, const: false});
+								}
+							case _:
+						}
+						return true;
+					case _:
+				}
 				if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
 					&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
 					return true;
@@ -1502,7 +1535,7 @@ class Interp {
 				if (fields == null)
 					return;
 
-				var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
+				var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): IrisCall {
 					if (!fields.exists(f))
 						return null;
 					var type: ValueType = Type.typeof(o);
@@ -1523,7 +1556,7 @@ class Interp {
 							Type.enumEq(type, valueType);
 					}
 
-					return canCall ? Reflect.callMethod(cls, Reflect.field(cls, f), [o].concat(args)) : null;
+					return canCall ? {funName: f, signature: cls, returnValue: Reflect.callMethod(cls, Reflect.getProperty(cls, f), [o].concat(args))} : null;
 				});
 
 				#if IRIS_DEBUG
@@ -1581,8 +1614,9 @@ class Interp {
 	function fcall(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
 		for (_using in usings) {
 			var v = _using.call(o, f, args);
-			if (v != null)
-				return v;
+			if(v != null) {
+				return v.returnValue;
+			}
 		}
 
 		return {

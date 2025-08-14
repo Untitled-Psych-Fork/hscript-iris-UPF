@@ -35,6 +35,15 @@ function onCreate() {
 	e_isc(ScriptedEnumSample.LetterC(114514, "goodbye world"));
 	e_isc(ScriptedEnumSample.LetterC("emm", "its wrong"));
 	e_isc(ScriptedEnumSample.LetterD("U", "Wont", "Died (ye?"));
+
+	Sys.println("");
+
+	trace("Lets Test => Binop (");
+	e_rc(EnumSampleBinop.ZERO);
+	e_rc(EnumSampleBinop.SINGLE);
+	e_rc(EnumSampleBinop.DOUBLE(new SampleRef(EnumSampleBinop.SINGLE)));
+	e_rc(EnumSampleBinop.TRIPLE(new SampleRef(EnumSampleBinop.ZERO), EnumSampleBinop.DOUBLE(new SampleRef(EnumSampleBinop.SINGLE))));
+	e_rc(EnumSampleBinop.TRIPLE(new SampleRef(EnumSampleBinop.SINGLE), EnumSampleBinop.ZERO));
 }
 
 function o_ic(sb:Dynamic) {
@@ -74,6 +83,8 @@ function a_ic(sb:Array<Dynamic>) {
 function e_ic(sb:EnumSample) {
 	Sys.println("match " + Std.string(sb) + "==================");
 	switch(sb) {
+		case EnumSample.LetterA:
+			trace("Real Sure That EnumSample.LetterA");
 		case EnumSample.LetterB(one) if(one == 114514):
 			trace("Confirmed \"114514\"");
 			trace("Sure that EnumSample.LetterB");
@@ -96,6 +107,8 @@ function e_ic(sb:EnumSample) {
 function e_isc(sb:ScriptedEnumSample) {
 	Sys.println("match " + Std.string(sb) + "==================");
 	switch(sb) {
+		case ScriptedEnumSample.LetterA:
+			trace("Real Sure That ScriptedEnumSample.LetterA");
 		case ScriptedEnumSample.LetterB(one) if(one == 114514):
 			trace("Confirmed \"114514\"");
 			trace("Sure that ScriptedEnumSample.LetterB");
@@ -111,6 +124,29 @@ function e_isc(sb:ScriptedEnumSample) {
 		case _:
 			trace("Sure that ScriptedEnumSample.LetterA");
 		//default: 狗都不用（但人用）
+	}
+	Sys.println("match over(Mabout!) ==================\n");
+}
+
+function e_rc(sb:EnumSampleBinop) {
+	Sys.println("match " + Std.string(sb) + "==================");
+	switch(sb) {
+		case EnumSampleBinop.SINGLE:
+			trace("Sure Single That " + Std.string(sb));
+		case EnumSampleBinop.DOUBLE(_.get() => one):
+			trace("Sure Double That " + Std.string(sb));
+			trace("Match This One Value: " + one);
+		case EnumSampleBinop.TRIPLE(_.get() => one, EnumSampleBinop.DOUBLE(_.get() => two)):
+			trace("Sure Triple That " + Std.string(sb));
+			trace("Match This One Value: " + one);
+			trace("Match This Two Value Is DOUBLE");
+			trace("Match DOUBLE's One Value: " + two);
+		case EnumSampleBinop.TRIPLE(_.get() => one, two):
+			trace("Sure Triple That " + Std.string(sb));
+			trace("Match This One Value: " + one);
+			trace("Match This Two Value: " + two);
+		case _:
+			trace("Sure Default That " + Std.string(sb));
 	}
 	Sys.println("match over(Mabout!) ==================\n");
 }

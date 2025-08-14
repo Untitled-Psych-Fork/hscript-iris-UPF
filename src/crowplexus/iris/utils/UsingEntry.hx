@@ -1,7 +1,7 @@
 package crowplexus.iris.utils;
 
 @:dox(hide)
-typedef UsingCall = (o: Dynamic, f: String, args: Array<Dynamic>) -> Dynamic;
+typedef UsingCall = (o: Dynamic, f: String, args: Array<Dynamic>) -> crowplexus.iris.Iris.IrisCall;
 
 @:dox(hide)
 class UsingEntry {
