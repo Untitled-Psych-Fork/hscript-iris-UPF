@@ -95,6 +95,7 @@ enum Expr
 	EEnum(name:String, fields:Array<EnumType>, ?pkg:Array<String>);
 	EDirectValue(value:Dynamic);
 	EUsing(name:String);
+	ECast(e:Expr, shut:Bool, ?t:CType);
 }
 
 typedef Argument = {name: String, ?t: CType, ?opt: Bool, ?value: Expr};
