@@ -67,7 +67,7 @@ class Interp {
 	/**
 	 * 还是觉得直接包装成静态更好一点（不模仿）
 	 */
-	static var staticVariables: #if haxe3 Map<String, DirectorField> = new Map() #else Hash<DirectorField> = new Hash() #end;
+	public static var staticVariables: #if haxe3 Map<String, DirectorField> = new Map() #else Hash<DirectorField> = new Hash() #end;
 
 	public inline static function getStaticFieldValue(name: String): Dynamic {
 		if (staticVariables.get(name) != null)

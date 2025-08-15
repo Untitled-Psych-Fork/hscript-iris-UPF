@@ -6,6 +6,7 @@ typedef RawIrisConfig = {
 	var name: String;
 	var ?allowEnum: Bool;
 	var ?allowClass: Bool;
+	var ?allowAbstract: Bool;
 	var ?autoRun: Bool;
 	var ?autoPreset: Bool;
 	var ?requestedPackageName: String;
@@ -18,10 +19,10 @@ class IrisConfig {
 	public var name: String = null;
 	public var allowEnum: Bool = false;
 	public var allowClass: Bool = false;
+	public var allowAbstract: Bool = false;
 	public var autoRun: Bool = true;
 	public var autoPreset: Bool = true;
 	public var requestedPackageName: String = null;
-
 	@:unreflective public var localBlocklist: Array<String> = [];
 
 	/**
@@ -30,16 +31,18 @@ class IrisConfig {
 	 * @param name			The obvious!
 	 * @param allowEnum			support script enum
 	 * @param allowClass			support script class
+	 * @param allowAbstract			support script abstract
 	 * @param autoRun					Makes the script run automatically upon being created.
 	 * @param autoPreset			Makes the script automatically set imports to itself upon creation.
 	 * @param requestedPackageName		Idk
 	 * @param localBlocklist	List of classes or enums that cannot be used within this particular script
 	**/
-	public function new(name: String, allowEnum: Bool = false, allowClass: Bool = false, autoRun: Bool = true, autoPreset: Bool = true,
+	public function new(name: String, allowEnum: Bool = false, allowClass: Bool = false, allowAbstract: Bool = false, autoRun: Bool = true, autoPreset: Bool = true,
 			?requestedPackageName: String, ?localBlocklist: Array<String>) {
 		this.name = name;
 		this.allowEnum = allowEnum;
 		this.allowClass = allowClass;
+		this.allowAbstract = allowAbstract;
 		this.autoRun = autoRun;
 		this.autoPreset = autoPreset;
 		if (requestedPackageName != null)
@@ -52,6 +55,6 @@ class IrisConfig {
 		if (d != null && Std.isOfType(d, IrisConfig))
 			return d;
 		var d: RawIrisConfig = cast d;
-		return new IrisConfig(d.name, d.allowEnum, d.allowClass, d.autoRun, d.autoPreset, d.requestedPackageName, d.localBlocklist);
+		return new IrisConfig(d.name, d.allowEnum, d.allowClass, d.allowAbstract, d.autoRun, d.autoPreset, d.requestedPackageName, d.localBlocklist);
 	}
 }

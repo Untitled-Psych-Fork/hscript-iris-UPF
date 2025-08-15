@@ -232,6 +232,7 @@ class Iris implements ISharedScript {
 		interp.showPosOnLog = false;
 		interp.allowScriptEnum = this.config.allowEnum;
 		interp.allowScriptClass = this.config.allowClass;
+		interp.allowAbstractHappened = this.config.allowAbstract;
 		interp.importHandler = _importHandler;
 
 		parser.allowTypes = true;
