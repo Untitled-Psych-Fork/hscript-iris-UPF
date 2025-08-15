@@ -337,17 +337,6 @@ class Printer {
 				}
 			case EIdent(v):
 				add(v);
-			case ECast(e, shut, t):
-				add("cast");
-				if(shut == true) {
-					add("(");
-					expr(e);
-					if(t != null) {
-						add(", ");
-						addType(t);
-					}
-					add(")");
-				}
 			case EVar(n, _, t, e, gt, st, c, ass):
 				if (gt == null)
 					gt = "default";

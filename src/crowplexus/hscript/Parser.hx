@@ -1030,21 +1030,6 @@ class Parser {
 				mk(EEnum(name, fields, packageName?.split(".")));
 			case "super":
 				parseExprNext(mk(EConst(CSuper)));
-			case "cast":
-				var e:Expr = null;
-				var t:CType = null;
-				var shut:Bool = false;
-				if(maybe(TPOpen)) {
-					shut = true;
-					e = parseExpr();
-					if(maybe(TComma)) {
-						t = parseType();
-					}
-					ensure(TPClose);
-				} else {
-					e = parseExpr();
-				}
-				parseExprNext(mk(ECast(e, shut, t)));
 			case "typedef":
 				if (abductCount > 0)
 					unexpected(TId(id));

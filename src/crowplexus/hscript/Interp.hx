@@ -786,8 +786,6 @@ class Interp {
 					}
 				}
 				return null;
-			case ECast(e, t):
-				return expr(e);
 			case EParent(e):
 				return expr(e);
 			case EBlock(exprs):

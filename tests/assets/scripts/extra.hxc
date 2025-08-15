@@ -1,14 +1,7 @@
-typedef Point = {
-	var x:Float;
-	var y:Float;
-}
-
 var sb = {
 	x: 0,
 	y: 0
 };
 
 sb.x = sb.y = 10;
-trace(cast sb);
-trace(cast(sb));
-trace(cast(sb, Point));
+trace(sb);
