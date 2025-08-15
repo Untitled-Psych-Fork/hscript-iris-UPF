@@ -151,9 +151,6 @@ class Parser {
 		opChars = "+*/-=!><&|^%~";
 		identChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
 		var priorities = [
-			#if haxe4
-			["is"],
-			#end
 			["%"],
 			["*", "/"],
 			["+", "-"],
@@ -161,6 +158,7 @@ class Parser {
 			["|", "&", "^"],
 			["==", "!=", ">", "<", ">=", "<="],
 			["..."],
+			["is"],
 			["&&"],
 			["||"],
 			[
@@ -191,7 +189,7 @@ class Parser {
 		for (i in 0...priorities.length)
 			for (x in priorities[i]) {
 				opPriority.set(x, i);
-				if (i == 9 #if haxe4 + 1 #end)
+				if (i == 9)
 					opRightAssoc.set(x, true);
 			}
 		for (x in ["!", "++", "--", "~"]) // unary "-" handled in parser directly!
@@ -1414,10 +1412,8 @@ class Parser {
 	function parseExprNext(e1: Expr) {
 		var tk = token();
 		switch (tk) {
-			#if haxe4
 			case TId("is"):
 				return makeBinop("is", e1, parseExpr());
-			#end
 			case TOp(op):
 				if (op == "->") {
 					// single arg reinterpretation of `f -> e` , `(f) -> e` and `(f:T) -> e`

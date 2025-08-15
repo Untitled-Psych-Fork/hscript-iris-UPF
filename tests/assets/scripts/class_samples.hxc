@@ -4,7 +4,7 @@ import samples.ObjectSample;
 import scripted.ScriptedBaseSample;
 
 class MySample extends ScriptedBaseSample {
-	var sb:Dynamic = 0;
+	var sb:Dynamic = null;
 
 	override function working() {
 		if(this.input != null) {
@@ -19,8 +19,6 @@ class MySample extends ScriptedBaseSample {
 
 var os = new ObjectSample();
 var sample = new MySample();
-
-trace(sample);
 
 var gs = new GroupSample();
 gs.push(os);
