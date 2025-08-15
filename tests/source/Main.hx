@@ -91,6 +91,7 @@ class Main {
 		Usage.init();
 	}
 
+
 	@:noCompletion static function loadNeeded() {
 		trace(ScriptedBaseSample);
 		trace(ScriptedGroupSample);
