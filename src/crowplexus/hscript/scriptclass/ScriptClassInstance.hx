@@ -37,7 +37,7 @@ class ScriptClassInstance extends BaseScriptClass {
 	}
 
 	public inline function superExistsFunction(f: String): Bool {
-		return cacheSuperFieldsName.contains("__SC_SUPER_" + f);
+		return cacheSuperFieldsName.contains(crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX + f);
 	}
 
 	public override function sc_exists(name: String): Bool {
@@ -261,7 +261,11 @@ class ScriptClassInstance extends BaseScriptClass {
 		return if (decl.expr == null) {
 			null;
 		} else {
-			__interp.exprReturn(decl.expr);
+			final oldVar = __interp.inVar;
+			__interp.inVar = "* class instance field";
+			var sb = __interp.expr(decl.expr);
+			__interp.inVar = oldVar;
+			return sb;
 		}
 	}
 
@@ -277,7 +281,7 @@ class ScriptClassInstance extends BaseScriptClass {
 					minParams--;
 				if (param.value != null) {
 					paramDefs.push({
-						__interp.exprReturn(param.value);
+						__interp.expr(param.value);
 					});
 				} else
 					paramDefs.push(null);

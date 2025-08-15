@@ -1,7 +1,6 @@
 package crowplexus.iris;
 
 import crowplexus.iris.utils.Ansi;
-import crowplexus.hscript.proxy.*;
 import haxe.ds.StringMap;
 import crowplexus.hscript.*;
 import crowplexus.hscript.Expr;
@@ -79,7 +78,15 @@ class Iris implements ISharedScript {
 	/**
 	 * Contains proxies for classes. So they can be sandboxed or add extra functionality.
 	**/
-	@:unreflective public static var proxyImports: Map<String, Dynamic> = ["Type" => ProxyType, "Reflect" => ProxyReflect, "Std" => ProxyStd];
+	@:unreflective public static var proxyImports: Map<String, Dynamic> = [
+		//base
+		"Type" => crowplexus.hscript.proxy.ProxyType,
+		"Reflect" => crowplexus.hscript.proxy.ProxyReflect,
+		"Std" => crowplexus.hscript.proxy.ProxyStd,
+
+		//xml
+		"haxe.xml.Access" => crowplexus.hscript.proxy.haxe.xml.ProxyAccess,
+	];
 
 	public static function addBlocklistImport(name: String): Void {
 		blocklistImports.push(name);
@@ -174,6 +181,11 @@ class Iris implements ISharedScript {
 	 * Config file, set when creating a new `Iris` instance.
 	**/
 	public var config: IrisConfig = null;
+
+	public var standard(get, never):Dynamic;
+	public function get_standard():Dynamic {
+		return this;
+	}
 
 	/**
 	 * Current script name, from `config.name`.

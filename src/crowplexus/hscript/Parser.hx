@@ -776,22 +776,41 @@ class Parser {
 				var e = if (tk == TSemicolon) null else parseExpr();
 				mk(EReturn(e), p1, if (e == null) tokenMax else pmax(e));
 			case "new":
-				var a = new Array();
-				a.push(getIdent());
-				while (true) {
-					var tk = token();
-					switch (tk) {
-						case TDot:
-							a.push(getIdent());
-						case TPOpen:
-							break;
-						default:
-							unexpected(tk);
-							break;
+				var tp:TypePath = null;
+				if(allowTypes) {
+					var pt:CType = parseType();
+					switch(pt) {
+						case CTPath(ob):
+							tp = ob;
+						case _:
+							error(ECustom("Invalid Type For new"), p1, tokenMax);
 					}
+					ensure(TPOpen);
+				} else {
+					var pkg:Array<String> = [];
+					pkg.push(getIdent());
+					while(true) {
+						var t = token();
+						switch(t) {
+							case TDot:
+								pkg.push(getIdent());
+							case TPOpen:
+								break;
+							case _:
+								unexpected(t);
+								break;
+						}
+					}
+					var name = pkg.pop();
+					tp = {
+						pack: pkg,
+						name: name,
+						params: [],
+						sub: null
+					};
 				}
 				var args = parseExprList(TPClose);
-				mk(ENew(a.join("."), args), p1);
+				mk(ENew(tp, args), p1);
 			case "throw":
 				var e = parseExpr();
 				mk(EThrow(e), p1, pmax(e));
@@ -1032,7 +1051,7 @@ class Parser {
 				mk(EEnum(name, fields, packageName?.split(".")));
 			case "super":
 				parseExprNext(mk(EConst(CSuper)));
-			case "cast":
+			case "cast" if(allowTypes):
 				var e:Expr = null;
 				var t:CType = null;
 				var shut:Bool = false;

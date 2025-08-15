@@ -20,4 +20,9 @@ class HScript extends Iris {
 			this.parser.allowInterpolation = true;
 		}
 	}
+
+	override function preset() {
+		set("Assets", Assets);
+		super.preset();
+	}
 }

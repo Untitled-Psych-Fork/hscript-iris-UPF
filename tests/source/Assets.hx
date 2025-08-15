@@ -24,6 +24,10 @@ class Assets {
 		#end
 	}
 
+	public static function getXml(path:String):Null<String> {
+		return getContent(Path.withoutExtension(path) + ".xml");
+	}
+
 	public static function getScript(path:String):Null<String> {
 		path = Path.withoutExtension(path);
 		for(ext in scriptExtensions) {

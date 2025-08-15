@@ -3,7 +3,7 @@ typedef Point = {
 	var y:Float;
 }
 
-var sb = {
+var sb:Point = {
 	x: 0,
 	y: 0
 };

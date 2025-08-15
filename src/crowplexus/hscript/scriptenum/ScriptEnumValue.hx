@@ -1,5 +1,7 @@
 package crowplexus.hscript.scriptenum;
 
+import crowplexus.hscript.Tools;
+
 class ScriptEnumValue {
 	public var enumName: String;
 	public var name: String;
@@ -41,15 +43,9 @@ class ScriptEnumValue {
 			return true;
 		if (args == null || other.args == null)
 			return false;
-		if (args.length != other.args.length)
-			return false;
+		if (Tools.valueSwitchMatch(args, other.args))
+			return true;
 
-		for (i in 0...args.length) {
-			// TODO: allow deep comparison, like arrays
-			if (args[i] != other.args[i])
-				return false;
-		}
-
-		return true;
+		return false;
 	}
 }

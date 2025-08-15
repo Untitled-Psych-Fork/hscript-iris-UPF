@@ -1,0 +1,38 @@
+import haxe.xml.Access;
+
+function onCreate() {
+	var xml:Access = new Access(Xml.parse(Assets.getXml("data/config")));
+	trace("获取人类信息……");
+	for(person in xml.node.root.nodes.person) {
+		var list = {id: person.att.id, name: person.node.name.innerData, address: parseAddress(person.node.address)};
+		trace("人类" + ": " + objectToString(list));
+	}
+	Sys.println("");
+	trace("获取产品信息……");
+	for(product in xml.node.root.node.products.nodes.product) {
+		var list = {id: product.node.id.innerData, name: product.node.name.innerData, price: '$$${product.node.price.innerData}'};
+		trace("产品：" + objectToString(list));
+	}
+}
+
+inline function parseAddress(address:Access):String {
+	trace(address.node);
+	return '${address.node.country.innerData}${address.node.city.innerData}${address.node.street.innerData}';
+}
+
+function objectToString(sb:Dynamic):String {
+	var buf = "";
+	buf += "{";
+	final fields = Reflect.fields(sb);
+	fields.sort(f -> -1);
+	if(Reflect.isObject(sb)) for(field in fields) {
+		buf += field;
+		buf += ": ";
+		buf += Std.string(Reflect.field(sb, field));
+		if(fields.indexOf(field) != fields.length - 1) {
+			buf += " | ";
+		}
+	}
+	buf += "}";
+	return buf;
+}

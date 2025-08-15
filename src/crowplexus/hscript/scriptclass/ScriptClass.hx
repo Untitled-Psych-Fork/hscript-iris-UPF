@@ -22,14 +22,16 @@ class ScriptClass extends BaseScriptClass {
 
 	private var fields: Array<BydFieldDecl>;
 
+	var metas: Metadata;
 	var staticInterp: Interp;
 	var ogInterp: Interp;
 
 	@:allow(crowplexus.hscript.Interp)
-	private function new(ogInterp: Interp, clsName: String, extendCls: String, fields: Array<BydFieldDecl>, ?pkg: Array<String>) {
+	private function new(ogInterp: Interp, clsName: String, extendCls: String, fields: Array<BydFieldDecl>, ?metas:Metadata, ?pkg: Array<String>) {
 		this.ogInterp = ogInterp;
 		this.name = clsName;
 		this.extend = extendCls;
+		if(metas != null) this.metas = metas;
 		if (extendCls != null && ogInterp.imports.get(extendCls) is Class) {
 			this.superClassDecl = cast ogInterp.imports.get(extendCls);
 		} else if (extendCls != null && !(ogInterp.imports.get(extendCls) is Class)) {
@@ -131,7 +133,7 @@ class ScriptClass extends BaseScriptClass {
 		if (superClassDecl != null) {
 			var classFields = Type.getInstanceFields(superClassDecl);
 			if (classFields.contains("__sc_standClass"))
-				classFields = classFields.filter(f -> !StringTools.startsWith(f, "__SC_SUPER_") && f != "__sc_standClass");
+				classFields = classFields.filter(f -> !StringTools.startsWith(f, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX) && f != "__sc_standClass");
 			return [
 				for (f in this.fields)
 					if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
@@ -193,12 +195,16 @@ class ScriptClass extends BaseScriptClass {
 		}
 	}
 
-	private function parseValDecl(decl: VarDecl) {
+	private function parseValDecl(decl: VarDecl):Dynamic {
 		@:privateAccess
 		return if (decl.expr == null) {
 			null;
 		} else {
-			staticInterp.exprReturn(decl.expr);
+			final oldVar = staticInterp.inVar;
+			staticInterp.inVar = "* class field";
+			var sb = staticInterp.expr(decl.expr);
+			staticInterp.inVar = oldVar;
+			return sb;
 		}
 	}
 
@@ -214,7 +220,7 @@ class ScriptClass extends BaseScriptClass {
 					minParams--;
 				if (param.value != null) {
 					paramDefs.push({
-						staticInterp.exprReturn(param.value);
+						staticInterp.expr(param.value);
 					});
 				} else
 					paramDefs.push(null);

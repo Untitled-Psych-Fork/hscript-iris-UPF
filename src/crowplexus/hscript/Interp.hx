@@ -200,8 +200,9 @@ class Interp {
 
 	var inFunction: Null<String>;
 	var callTP: Bool;
-	var fieldDotRet: Array<String> = new Array<String>();
+	var fieldDotRet: Array<String> = [];
 	var inVar: Null<String>;
+	var metas: Metadata = [];
 
 	//当字段为_时将会识别此值并捕获它（
 	var added_value: Dynamic = null;
@@ -514,6 +515,7 @@ class Interp {
 
 	public function execute(expr: Expr): Dynamic {
 		added_value = null;
+		metas = new Metadata();
 		fieldDotRet = new Array<String>();
 		callTP = false;
 		depth = 0;
@@ -666,7 +668,10 @@ class Interp {
 							var inPos = 0;
 							for (m in sm) {
 								if (m != null) {
-									var ret = Std.string(exprReturn(m.e));
+									final oldVar = inVar;
+									inVar = null;
+									var ret = Std.string(expr(m.e));
+									inVar = oldVar;
 									s = Printer.stringInsert(s, m.pos + inPos, ret);
 									inPos += ret.length;
 								}
@@ -690,10 +695,14 @@ class Interp {
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
 				final re: Dynamic = resolve(id);
-				if (fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if (cls.superClass != null) {
-						return cls.superClass;
+				if (inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null) {
+							return cls.superClass;
+						}
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
 					}
 				}
 				return re;
@@ -803,12 +812,32 @@ class Interp {
 				fieldDotRet.pop();
 				if (e == null)
 					return null;
-				return get(e, f);
+				var re:Dynamic = get(e, f);
+				if(inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null)
+							return cls.superClass;
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
+					}
+				}
+				return re;
 			case EField(e, f, false):
 				fieldDotRet.push(f);
-				var re = expr(e);
+				var e = expr(e);
 				fieldDotRet.pop();
-				return get(re, f);
+				var re:Dynamic = get(e, f);
+				if(inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null)
+							return cls.superClass;
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
+					}
+				}
+				return re;
 			case EBinop(op, e1, e2):
 				var fop = binops.get(op);
 				if (fop == null)
@@ -840,6 +869,7 @@ class Interp {
 					args.push(expr(p));
 
 				callTP = true;
+				var re:Dynamic = null;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
 						if (Tools.expr(e).match(EConst(CSuper)))
@@ -850,13 +880,24 @@ class Interp {
 						if (obj == null)
 							if (!s)
 								error(EInvalidAccess(f));
-						return fcall(obj, f, args);
+						re = fcall(obj, f, args);
 					case EConst(CSuper):
-						return super_call(args);
+						re = super_call(args);
 					default:
-						return call(null, expr(e), args);
+						re = call(null, expr(e), args);
 				}
 				callTP = false;
+				if (inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null) {
+							return cls.superClass;
+						}
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
+					}
+				}
+				return re;
 			case EIf(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else if (e2 == null) null else expr(e2);
 			case EWhile(econd, e):
@@ -1072,11 +1113,21 @@ class Interp {
 			case EArray(e, index):
 				var arr: Dynamic = expr(e);
 				var index: Dynamic = expr(index);
-				if (isMap(arr)) {
-					return getMapValue(arr, index);
+				var re:Dynamic = if (isMap(arr)) {
+					getMapValue(arr, index);
 				} else {
-					return arr[index];
+					arr[index];
+				};
+				if(inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null)
+							return cls.superClass;
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
+					}
 				}
+				return re;
 			case ENew(cl, params):
 				var a = new Array();
 				final ov = inVar;
@@ -1085,11 +1136,15 @@ class Interp {
 					a.push(expr(e));
 				}
 				inVar = ov;
-				var re = cnew(cl, a);
-				if (inVar == null && fieldDotRet.length == 0 && re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-					var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-					if (cls.superClass != null)
-						return cls.superClass;
+				var re = cnew((cl.pack != null && cl.pack.length > 0 ? cl.pack.join(".") + "." : "") + cl.name, a);
+				if (inVar == null && fieldDotRet.length == 0) {
+					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+						if (cls.superClass != null)
+							return cls.superClass;
+					} else if(re is ISharedScript) {
+						return cast(re, ISharedScript).standard;
+					}
 				}
 				return re;
 			case EThrow(e):
@@ -1119,8 +1174,12 @@ class Interp {
 				}
 			case EObject(fl):
 				var o = {};
-				for (f in fl)
+				for (f in fl) {
+					final oldVar = inVar;
+					inVar = f.name;
 					set(o, f.name, expr(f.e));
+					inVar = oldVar;
+				}
 				return o;
 			case ETernary(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else expr(e2);
@@ -1148,8 +1207,11 @@ class Interp {
 				if (!match)
 					val = def == null ? null : expr(def);
 				return val;
-			case EMeta(_, _, e):
-				return expr(e);
+			case EMeta(n, params, e):
+				metas.push(cast {name: n, params: params});
+				var e = expr(e);
+				metas.pop();
+				return e;
 			case ECheckType(e, _):
 				return expr(e);
 			case EClass(clName, exName, imName, fields, pkg):
@@ -1159,7 +1221,7 @@ class Interp {
 				}
 				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + clName : clName);
 				if (!scriptClasses.exists(fullPath)) {
-					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, pkg);
+					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, metas, pkg);
 					scriptClasses.set(cl.fullPath, cl);
 					imports.set(clName, cl);
 				} else {
@@ -1478,8 +1540,8 @@ class Interp {
 			error(EInvalidAccess(f));
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
-		@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
-			return o.__sc_standClass.sc_get(f);
+		/*@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
+			return o.__sc_standClass.sc_get(f);*/
 		if (o is ISharedScript)
 			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
@@ -1502,10 +1564,7 @@ class Interp {
 		@:privateAccess
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
-		else if (o is crowplexus.hscript.scriptclass.IScriptedClass)
-			o.__sc_standClass.sc_set(f, v);
-		else if (o is ISharedScript)
-			cast(o, ISharedScript).hset(f, v #if hscriptPos, this.curExpr #end);
+		else if(o is ISharedScript) cast(o, ISharedScript).hset(f, v);
 		else
 			Reflect.setProperty(o, f, v);
 		return v;

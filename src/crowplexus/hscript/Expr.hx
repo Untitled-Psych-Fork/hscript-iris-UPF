@@ -82,7 +82,7 @@ enum Expr
 	EReturn(?e:Expr);
 	EArray(e:Expr, index:Expr);
 	EArrayDecl(e:Array<Expr>);
-	ENew(cl:String, params:Array<Expr>);
+	ENew(cl:TypePath, params:Array<Expr>);
 	EThrow(e:Expr);
 	ETry(e:Expr, v:String, t:Null<CType>, ecatch:Expr);
 	EObject(fl:Array<ObjectDecl>);

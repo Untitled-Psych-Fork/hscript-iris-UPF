@@ -1,11 +1,14 @@
 package crowplexus.iris.macro;
 
+#if macro
 import haxe.macro.Expr;
 import haxe.macro.Context;
 import haxe.macro.Type;
 import haxe.macro.Printer;
 import Type as OType;
+#end
 
+#if macro
 /**
  * @see `懒得说`
  * 其实也没借鉴多少hah
@@ -480,3 +483,8 @@ typedef ChouxiangArg = {
 	var value: Null<Expr>;
 	var ret: ComplexType;
 }
+#else
+class ScriptedClassMacro {
+	public static inline var SUPER_FUNCTION_PREFIX: String = "__SC_SUPER_";
+}
+#end

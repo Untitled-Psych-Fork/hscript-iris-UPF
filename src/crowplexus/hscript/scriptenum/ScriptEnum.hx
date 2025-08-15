@@ -3,6 +3,11 @@ package crowplexus.hscript.scriptenum;
 import crowplexus.hscript.Expr;
 
 class ScriptEnum implements crowplexus.hscript.ISharedScript {
+	public var standard(get, never):Dynamic;
+	public function get_standard():Dynamic {
+		return this;
+	}
+
 	public var name: String;
 	public var fullPath(get, never): String;
 

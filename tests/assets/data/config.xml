@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+	<!-- 这是一个注释示例 -->
+	<person id="1">
+		<name>张三</name>
+		<age>30</age>
+		<email>zhangsan@example.com</email>
+		<address>
+			<street>人民路123号</street>
+			<city>北京市</city>
+			<country>中国</country>
+		</address>
+	</person>
+
+	<person id="2">
+		<name>李四</name>
+		<age>28</age>
+		<email>lisi@example.com</email>
+		<address>
+			<street>中山路456号</street>
+			<city>上海市</city>
+			<country>中国</country>
+		</address>
+	</person>
+
+	<products>
+		<product>
+			<id>1001</id>
+			<name>笔记本电脑</name>
+			<price>5999.00</price>
+		</product>
+		<product>
+			<id>1002</id>
+			<name>智能手机</name>
+			<price>3999.00</price>
+		</product>
+	</products>
+</root>

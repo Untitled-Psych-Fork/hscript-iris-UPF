@@ -515,7 +515,9 @@ class Printer {
 				}
 				add("]");
 			case ENew(cl, args):
-				add("new " + cl + "(");
+				add("new ");
+				typePath(cl);
+				add("(");
 				var first = true;
 				for (e in args) {
 					if (first)

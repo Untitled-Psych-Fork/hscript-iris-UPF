@@ -19,13 +19,11 @@ class ScriptClassInterp extends Interp {
 			error(EInvalidAccess(f));
 		if (o is IScriptedClass) {
 			if (scriptClass.superExistsFunction(f)) {
-				return Reflect.getProperty(o, "__SC_SUPER_" + f);
+				return Reflect.getProperty(o, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX + f);
 			}
 		}
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
-		@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
-			return o.__sc_standClass.sc_get(f);
 		if (o is ISharedScript)
 			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
@@ -164,7 +162,7 @@ class ScriptClassInterp extends Interp {
 		if (scriptClass.superClass != null) {
 			if (scriptClass.superClass is IScriptedClass) {
 				if (scriptClass.superExistsFunction(field)) {
-					return call(null, Reflect.getProperty(scriptClass.superClass, "__SC_SUPER_" + field), args);
+					return call(null, Reflect.getProperty(scriptClass.superClass, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX + field), args);
 				} else
 					error(ECustom("Invalid Calling -> super." + field + "()"));
 			} else {
