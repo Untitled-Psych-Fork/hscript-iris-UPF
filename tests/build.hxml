@@ -3,6 +3,8 @@
 -D analyzer-optimize
 -D IRIS_DEBUG
 
+define.hxml
+
 -cp source
 -main Main
 
