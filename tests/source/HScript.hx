@@ -25,4 +25,11 @@ class HScript extends Iris {
 		set("Assets", Assets);
 		super.preset();
 	}
+
+	public function print(useTab: Bool = false, ?spaceBit: Int = 2):Null<String> {
+		if(expr != null) {
+			return new Printer(spaceBit, useTab).exprToString(expr);
+		}
+		return null;
+	}
 }

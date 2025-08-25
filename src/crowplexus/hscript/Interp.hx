@@ -829,13 +829,22 @@ class Interp {
 				}
 			case ECall(e, params):
 				var args = new Array();
-				for (p in params)
-					args.push(expr(p));
 
 				callTP = true;
 				var re:Dynamic = null;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
+						var devs:Array<String> = [];
+						var minParams:Int = 0;
+						for (i=>p in params) {
+							args[i] = if(Tools.expr(p).match(EIdent("_"))) {
+								devs[i] = "_";
+								minParams++;
+								null;
+							} else {
+								expr(p);
+							}
+						}
 						if (Tools.expr(e).match(EConst(CSuper)))
 							return super_field_call(f, args);
 						fieldDotRet.push(f);
@@ -844,10 +853,32 @@ class Interp {
 						if (obj == null)
 							if (!s)
 								error(EInvalidAccess(f));
-						re = fcall(obj, f, args);
+						if(f == "bind" && Reflect.isFunction(obj)) {
+							re = Reflect.makeVarArgs(function(params:Array<Dynamic>) {
+								if(params.length < minParams) {
+									var str = "Invalid number of parameters. Got " + params.length + ", required " + minParams + " for function 'bind'";
+									error(ECustom(str));
+								}
+								var forceArgs:Array<Dynamic> = [];
+								for(i=>arg in args) {
+									if(devs[i] != null) {
+										forceArgs.push(params.shift());
+									} else {
+										forceArgs.push(arg);
+									}
+								}
+								return Reflect.callMethod(null, obj, forceArgs);
+							});
+						} else {
+							re = fcall(obj, f, args);
+						}
 					case EConst(CSuper):
+						for (p in params)
+							args.push(expr(p));
 						re = super_call(args);
 					default:
+						for (p in params)
+							args.push(expr(p));
 						re = call(null, expr(e), args);
 				}
 				callTP = false;
@@ -860,8 +891,8 @@ class Interp {
 			case EDoWhile(econd, e):
 				doWhileLoop(econd, e);
 				return null;
-			case EFor(v, it, e):
-				forLoop(v, it, e);
+			case EFor(v, it, e, k):
+				forLoop(v, it, e, k);
 				return null;
 			case EBreak:
 				throw SBreak;
@@ -1449,28 +1480,50 @@ class Interp {
 		restore(old);
 	}
 
-	function makeIterator(v: Dynamic): Iterator<Dynamic> {
-		#if ((flash && !flash9) || (php && !php7 && haxe_ver < '4.0.0'))
-		if (v.iterator != null)
+	/*
+	 * 借（实际上写出来了，但以为自己写的不太行就覆盖了）
+	 * @see https://github.com/CodenameCrew/hscript-improved/blob/codename-dev/hscript/Interp.hx#L1309
+	 */
+	function makeIterator(v:Dynamic, ?allowKeyValue = false):Iterator<Dynamic> {
+		#if js
+		// don't use try/catch (very slow)
+		if(v is Array) {
+			return allowKeyValue ? (v:Array<Dynamic>).keyValueIterator() : (v:Array<Dynamic>).iterator();
+		}
+		if(allowKeyValue && v.keyValueIterator != null)
+			v = v.keyValueIterator();
+		else if (v.iterator != null)
 			v = v.iterator();
 		#else
-		try
-			v = v.iterator()
-		catch (e:Dynamic) {};
+		if(allowKeyValue) 
+			try v = v.keyValueIterator() catch (e:Dynamic) {};
+
+		if(v.hasNext == null || v.next == null) 
+			try v = v.iterator() catch (e:Dynamic) {};
+
 		#end
-		if (v.hasNext == null || v.next == null)
-			error(EInvalidIterator(v));
+		if (v.hasNext == null || v.next == null) error(EInvalidIterator(v));
 		return v;
 	}
 
-	function forLoop(n, it, e) {
+	/**
+	 * 借
+	 * https://github.com/CodenameCrew/hscript-improved/blob/codename-dev/hscript/Interp.hx#L1351
+	 */
+	function forLoop(n:String, it:Expr, e:Expr, ?ithv:String):Void {
+		var isKeyValue = ithv != null;
 		var old = declared.length;
+		if(isKeyValue)
+			declared.push({n: ithv, old: locals.get(ithv)});
 		declared.push({n: n, old: locals.get(n)});
-		var it = makeIterator(expr(it));
-		var _itHasNext = it.hasNext;
-		var _itNext = it.next;
-		while (_itHasNext()) {
-			locals.set(n, {r: _itNext(), const: false});
+		var it = makeIterator(expr(it), isKeyValue);
+		var _hasNext = it.hasNext;
+		var _next = it.next;
+		while (_hasNext()) {
+			var next = _next();
+			if(isKeyValue)
+				locals.set(ithv, {r: next.key, const: false});
+			locals.set(n, {r: isKeyValue ? next.value : next, const: false});
 			try {
 				expr(e);
 			} catch (err:Stop) {

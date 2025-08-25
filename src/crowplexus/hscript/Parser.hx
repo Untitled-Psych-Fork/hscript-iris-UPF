@@ -658,8 +658,8 @@ class Parser {
 		if (e == null)
 			return null;
 		var edef = switch (expr(e)) {
-			case EFor(v, it, e2):
-				EFor(v, it, mapCompr(tmp, e2));
+			case EFor(v, it, e2, k):
+				EFor(v, it, mapCompr(tmp, e2), k);
 			case EWhile(cond, e2):
 				EWhile(cond, mapCompr(tmp, e2));
 			case EDoWhile(cond, e2):
@@ -755,12 +755,18 @@ class Parser {
 				mk(EDoWhile(econd, e), p1, pmax(econd));
 			case "for":
 				ensure(TPOpen);
-				var vname = getIdent();
+				var kname:Null<String> = null;
+				var vname:Null<String> = null;
+				vname = getIdent();
+				if(maybe(TOp("=>"))) {
+					kname = vname;
+					vname = getIdent();
+				}
 				ensureToken(TId("in"));
 				var eiter = parseExpr();
 				ensure(TPClose);
 				var e = parseExpr();
-				mk(EFor(vname, eiter, e), p1, pmax(e));
+				mk(EFor(vname, eiter, e, kname), p1, pmax(e));
 			case "break": mk(EBreak);
 			case "continue": mk(EContinue);
 			case "else": unexpected(TId(id));

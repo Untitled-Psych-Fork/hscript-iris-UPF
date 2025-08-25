@@ -412,9 +412,8 @@ class Iris implements ISharedScript {
 			 * Sets a new field to the script
 			 * @param name          The name of your new field, scripts will be able to use the field with the name given.
 			 * @param value         The value for your new field.
-			 * @param allowOverride If set to true, when setting the new field, we will ignore any previously set fields of the same name.
 			 */
-	public function set(name: String, value: Dynamic, allowOverride: Bool = true): Void {
+	public function set(name: String, value: Dynamic): Void {
 		if (interp == null || interp.variables == null) {
 			#if IRIS_DEBUG
 			Iris.fatal("[Iris:set()]: " + interpErrStr + ", when trying to set variable \"" + name + "\" so variables cannot be set.");
@@ -422,10 +421,8 @@ class Iris implements ISharedScript {
 			return;
 		}
 
-		if (interp.imports != null && (value is Class || value is Enum))
+		if (interp.imports != null)
 			interp.imports.set(name, value);
-		else if (allowOverride || !interp.variables.exists(name))
-			interp.variables.set(name, value);
 	}
 
 	/**

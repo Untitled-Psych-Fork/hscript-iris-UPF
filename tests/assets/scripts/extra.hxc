@@ -12,3 +12,25 @@ sb.x = sb.y = 10;
 trace(cast sb);
 trace(cast(sb));
 trace(cast(sb, Point));
+
+var f = function(title:String, content:String, cond:Bool, result:Int, sb:Float) {
+	trace("function bind:", title, content, "add:", result + sb, cond);
+};
+
+(f.bind("title", _, true, _, 12.5))("ahhhhh", 13);
+
+var testArray = ["apple", "banana", "orange",];
+var fruitPriceMap = [
+	"apple" => "10$",
+	"banana" => "12$",
+	"orange" => "115$",
+];
+trace("Loop testArray");
+for(value in testArray) {
+	trace("Value: " + value);
+}
+Sys.println("");
+trace("Loop fruitPriceMap");
+for(key=>value in fruitPriceMap) {
+	trace(key + "'s price is " + value);
+}
