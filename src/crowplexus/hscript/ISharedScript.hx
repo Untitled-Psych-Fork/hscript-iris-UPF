@@ -3,7 +3,8 @@ package crowplexus.hscript;
 import crowplexus.hscript.Expr;
 
 /**
- * 我摊牌了，直接抄
+ * 一种更抽象的玩意儿
+ * @see https://github.com/CodenameCrew/hscript-improved/blob/master/hscript/IHScriptCustomBehaviour.hx
  */
 interface ISharedScript {
 	public var standard(get, never):Dynamic;

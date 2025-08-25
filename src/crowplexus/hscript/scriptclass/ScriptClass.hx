@@ -200,11 +200,7 @@ class ScriptClass extends BaseScriptClass {
 		return if (decl.expr == null) {
 			null;
 		} else {
-			final oldVar = staticInterp.inVar;
-			staticInterp.inVar = "* class field";
-			var sb = staticInterp.expr(decl.expr);
-			staticInterp.inVar = oldVar;
-			return sb;
+			staticInterp.convertSimgle(staticInterp.expr(decl.expr));
 		}
 	}
 
@@ -259,7 +255,7 @@ class ScriptClass extends BaseScriptClass {
 				staticInterp.depth++;
 				staticInterp.locals = staticInterp.duplicate(capturedLocals);
 				for (i in 0...decl.args.length)
-					staticInterp.locals.set(decl.args[i].name, {r: args[i], const: false});
+					staticInterp.locals.set(decl.args[i].name, {r: staticInterp.convertSimgle(args[i]), const: false});
 
 				var r = null;
 				var oldDecl = staticInterp.declared.length;

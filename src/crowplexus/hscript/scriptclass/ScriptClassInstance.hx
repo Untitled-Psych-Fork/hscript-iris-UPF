@@ -261,11 +261,7 @@ class ScriptClassInstance extends BaseScriptClass {
 		return if (decl.expr == null) {
 			null;
 		} else {
-			final oldVar = __interp.inVar;
-			__interp.inVar = "* class instance field";
-			var sb = __interp.expr(decl.expr);
-			__interp.inVar = oldVar;
-			return sb;
+			__interp.convertSimgle(__interp.expr(decl.expr));
 		}
 	}
 
@@ -320,7 +316,7 @@ class ScriptClassInstance extends BaseScriptClass {
 				__interp.depth++;
 				__interp.locals = __interp.duplicate(capturedLocals);
 				for (i in 0...decl.args.length)
-					__interp.locals.set(decl.args[i].name, {r: args[i], const: false});
+					__interp.locals.set(decl.args[i].name, {r: __interp.convertSimgle(args[i]), const: false});
 
 				var r = null;
 				var oldDecl = __interp.declared.length;

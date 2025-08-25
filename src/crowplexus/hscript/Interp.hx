@@ -201,8 +201,8 @@ class Interp {
 	var inFunction: Null<String>;
 	var callTP: Bool;
 	var fieldDotRet: Array<String> = [];
-	var inVar: Null<String>;
 	var metas: Metadata = [];
+	var converted:Array<Dynamic> = [];
 
 	//当字段为_时将会识别此值并捕获它（
 	var added_value: Dynamic = null;
@@ -517,6 +517,7 @@ class Interp {
 		added_value = null;
 		metas = new Metadata();
 		fieldDotRet = new Array<String>();
+		converted = new Array<Dynamic>();
 		callTP = false;
 		depth = 0;
 		#if haxe3
@@ -668,10 +669,7 @@ class Interp {
 							var inPos = 0;
 							for (m in sm) {
 								if (m != null) {
-									final oldVar = inVar;
-									inVar = null;
 									var ret = Std.string(expr(m.e));
-									inVar = oldVar;
 									s = Printer.stringInsert(s, m.pos + inPos, ret);
 									inPos += ret.length;
 								}
@@ -694,32 +692,18 @@ class Interp {
 				if(id == "_" && added_value != null) return added_value;
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
-				final re: Dynamic = resolve(id);
-				if (inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null) {
-							return cls.superClass;
-						}
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(resolve(id));
 			case EVar(n, de, _, v, getter, setter, isConst, ass):
 				if (getter == null)
 					getter = "default";
 				if (setter == null)
 					setter = "default";
 
-				final ov = inVar;
-				inVar = n;
-				var v = (v == null ? null : expr(v));
-				inVar = ov;
+				var v = (v == null ? null : convertSimgle(expr(v)));
 				if (ass != null && ass.contains("inline")) {
 					var tv = Type.typeof(v);
 					switch (tv) {
-						case Type.ValueType.TNull | Type.ValueType.TFloat | Type.ValueType.TInt | Type.ValueType.TBool | Type.ValueType.TClass(String):
+						case Type.ValueType.TNull | Type.ValueType.TFloat | Type.ValueType.TInt | Type.ValueType.TBool | Type.ValueType.TClass(String) | Type.ValueType.TClass(crowplexus.hscript.scriptenum.ScriptEnumValue) | Type.ValueType.TEnum(_):
 						default:
 							error(ECustom("Inline variable initialization must be a constant value"));
 					}
@@ -812,32 +796,12 @@ class Interp {
 				fieldDotRet.pop();
 				if (e == null)
 					return null;
-				var re:Dynamic = get(e, f);
-				if(inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null)
-							return cls.superClass;
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(get(e, f));
 			case EField(e, f, false):
 				fieldDotRet.push(f);
 				var e = expr(e);
 				fieldDotRet.pop();
-				var re:Dynamic = get(e, f);
-				if(inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null)
-							return cls.superClass;
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(get(e, f));
 			case EBinop(op, e1, e2):
 				var fop = binops.get(op);
 				if (fop == null)
@@ -887,17 +851,7 @@ class Interp {
 						re = call(null, expr(e), args);
 				}
 				callTP = false;
-				if (inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null) {
-							return cls.superClass;
-						}
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(re);
 			case EIf(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else if (e2 == null) null else expr(e2);
 			case EWhile(econd, e):
@@ -1004,7 +958,7 @@ class Interp {
 					me.depth++;
 					me.locals = me.duplicate(capturedLocals);
 					for (i in 0...params.length)
-						me.locals.set(params[i].name, {r: args[i], const: false});
+						me.locals.set(params[i].name, {r: convertSimgle(args[i]), const: false});
 					var r = null;
 					var oldDecl = declared.length;
 
@@ -1100,13 +1054,13 @@ class Interp {
 							throw 'Inconsistent key types';
 					}
 					for (n in 0...keys.length) {
-						setMapValue(map, keys[n], values[n]);
+						setMapValue(map, keys[n], convertSimgle(values[n]));
 					}
 					return map;
 				} else {
 					var a = new Array();
 					for (e in arr) {
-						a.push(expr(e));
+						a.push(convertSimgle(expr(e)));
 					}
 					return a;
 				}
@@ -1118,35 +1072,14 @@ class Interp {
 				} else {
 					arr[index];
 				};
-				if(inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null)
-							return cls.superClass;
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(re);
 			case ENew(cl, params):
 				var a = new Array();
-				final ov = inVar;
-				inVar = null;
 				for (e in params) {
 					a.push(expr(e));
 				}
-				inVar = ov;
 				var re = cnew((cl.pack != null && cl.pack.length > 0 ? cl.pack.join(".") + "." : "") + cl.name, a);
-				if (inVar == null && fieldDotRet.length == 0) {
-					if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-						var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
-						if (cls.superClass != null)
-							return cls.superClass;
-					} else if(re is ISharedScript) {
-						return cast(re, ISharedScript).standard;
-					}
-				}
-				return re;
+				return convertDouble(re);
 			case EThrow(e):
 				throw expr(e);
 			case ETry(e, n, _, ecatch):
@@ -1175,10 +1108,7 @@ class Interp {
 			case EObject(fl):
 				var o = {};
 				for (f in fl) {
-					final oldVar = inVar;
-					inVar = f.name;
-					set(o, f.name, expr(f.e));
-					inVar = oldVar;
+					set(o, f.name, convertSimgle(expr(f.e)));
 				}
 				return o;
 			case ETernary(econd, e1, e2):
@@ -1438,6 +1368,39 @@ class Interp {
 		}
 
 		return false;
+	}
+
+	function convertSimgle(v:Dynamic):Dynamic {
+		if(converted.length > 0) {
+			var sb:Dynamic = converted.pop();
+			if(sb is ISharedScript) {
+				if(v == cast(sb, ISharedScript).standard) v = sb;
+			} else if(sb is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if(v == cast(sb, crowplexus.hscript.scriptclass.ScriptClassInstance).superClass) v = sb;
+			}
+		}
+
+		var i:Int = -1;
+		while(i++ < converted.length - 1) {
+			converted.pop();
+		}
+		return v;
+	}
+
+	function convertDouble(re:Dynamic):Dynamic {
+		if (fieldDotRet.length == 0) {
+			if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
+				if (cls.superClass != null) {
+					converted.push(cls);
+					return cls.superClass;
+				}
+			} else if(re is ISharedScript) {
+				converted.push(re);
+				return cast(re, ISharedScript).standard;
+			}
+		}
+		return re;
 	}
 
 	function super_call(args: Array<Dynamic>): Dynamic {

@@ -28,29 +28,13 @@ class ScriptEnum implements crowplexus.hscript.ISharedScript {
 		this.packages = packages;
 	}
 
-	public function hget(id: String, ?expr: Expr): Dynamic {
+	public function hget(id: String, ?e: Expr): Dynamic {
 		if (!sm.exists(id))
-			#if hscriptPos
-			throw if (expr != null) {
-				new Error(ECustom("ScriptEnum -> '" + name + "' Has Not EnumValue -> '" + id + "'"), expr.pmin, expr.pmax, expr.origin, expr.line);
-			} else {
-				new Error(ECustom("ScriptEnum -> '" + name + "' Has Not EnumValue -> '" + id + "'"), 0, 0, "hscript", 0);
-			}
-			#else
-			throw ECustom("ScriptEnum -> '" + name + "' Has Not EnumValue -> '" + id + "'")
-			#end
-			return sm.get(id);
+			throw "ScriptEnum -> '" + name + "' Has Not EnumValue -> '" + id + "'";
+		return sm.get(id);
 	}
 
-	public function hset(name: String, value: Dynamic, ?expr: Expr): Void {
-		#if hscriptPos
-		throw if (expr != null) {
-			new Error(ECustom("Cannot Set-up EnumValue"), expr.pmin, expr.pmax, expr.origin, expr.line);
-		} else {
-			new Error(ECustom("Cannot Set-up EnumValue"), 0, 0, "hscript", 0);
-		}
-		#else
-		throw ECustom("Cannot Set-up EnumValue");
-		#end
+	public function hset(name: String, value: Dynamic, ?e: Expr): Void {
+		throw "Cannot Set-up EnumValue";
 	}
 }
