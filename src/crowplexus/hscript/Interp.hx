@@ -1495,8 +1495,11 @@ class Interp {
 		else if (v.iterator != null)
 			v = v.iterator();
 		#else
-		if(allowKeyValue) 
-			try v = v.keyValueIterator() catch (e:Dynamic) {};
+		if(allowKeyValue) {
+			if(isMap(v)) {
+				v = cast(v, IMap<Dynamic, Dynamic>).keyValueIterator();
+			} else try v = v.keyValueIterator() catch (e:Dynamic) {};
+		}
 
 		if(v.hasNext == null || v.next == null) 
 			try v = v.iterator() catch (e:Dynamic) {};
