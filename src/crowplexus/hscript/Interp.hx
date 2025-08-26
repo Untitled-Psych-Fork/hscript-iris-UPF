@@ -1145,7 +1145,7 @@ class Interp {
 			case EObject(fl):
 				var o = {};
 				for (f in fl) {
-					set(o, f.name, convertSimgle(expr(f.e)));
+					set(o, f.name, expr(f.e));
 				}
 				return o;
 			case ETernary(econd, e1, e2):

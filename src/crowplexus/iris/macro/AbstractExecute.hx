@@ -5,6 +5,9 @@ import haxe.macro.Expr;
 import haxe.macro.Context;
 import haxe.macro.Type;
 
+/**
+ * 别看，我tm还没打算做
+ */
 class AbstractExecute {
 	public static inline var ABSTRACT_IMPLEMENTS_STUFFIX: String = "_SEX_AIS";
 	static var specifyAbstractPath: Null<String>;
@@ -45,6 +48,6 @@ class AbstractExecute {
 }
 #else
 class AbstractExecute {
-	public static inline var ABSTRACT_EXECUTE_STUFFIX: String = "_SEX";
+	public static inline var ABSTRACT_EXECUTE_STUFFIX: String = "_SEX_AIS";
 }
 #end

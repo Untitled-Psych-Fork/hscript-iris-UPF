@@ -8,6 +8,7 @@ import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
 import crowplexus.hscript.scriptclass.IScriptedClass;
 import crowplexus.iris.Iris;
+import crowplexus.hscript.proxy.flixel.util.ProxyFlxColor;
 import haxe.Constraints;
 
 @:build(macros.TestingMacro.build())
@@ -103,6 +104,7 @@ class Main {
 	}
 
 	static function init() {
+		Iris.addProxyImport("flixel.util.FlxColor", ProxyFlxColor);
 		Assets.init(haxe.io.Path.addTrailingSlash(Sys.getCwd()) + "assets", ["hxc", "hxs"]);
 	}
 }
