@@ -458,11 +458,15 @@ class Printer {
 				add(" while ( ");
 				expr(cond);
 				add(" )");
-			case EFor(v, it, e, k):
+			case EFor(v, it, e):
 				add("for( ");
-				if(k != null) add(k + " => ");
 				add(v);
 				add(" in ");
+				expr(it);
+				add(" ) ");
+				expr(e);
+			case EForGen(it, e):
+				add("for( ");
 				expr(it);
 				add(" ) ");
 				expr(e);

@@ -1,3 +1,5 @@
+import samples.enums.EnumSample;
+
 typedef Point = {
 	var x:Float;
 	var y:Float;
@@ -21,9 +23,9 @@ var f = function(title:String, content:String, cond:Bool, result:Int, sb:Float) 
 
 var testArray = ["apple", "banana", "orange",];
 var fruitPriceMap = [
-	"apple" => "10$",
-	"banana" => "12$",
-	"orange" => "115$",
+	10 => "apple",
+	12 => "banana",
+	115 => "orange",
 ];
 trace("Loop testArray");
 for(value in testArray) {
@@ -32,5 +34,8 @@ for(value in testArray) {
 Sys.println("");
 trace("Loop fruitPriceMap");
 for(key=>value in fruitPriceMap) {
-	trace(key + "'s price is " + value);
+	trace(value + "'s price is " + key + "$");
 }
+
+var checkEnum = EnumSample.LetterD(EnumSample.LetterB(EnumSample.LetterB(1)), EnumSample.LetterC("sb", "ahhh"), EnumSample.LetterA);
+trace(checkEnum.match(EnumSample.LetterD(EnumSample.LetterB(EnumSample.LetterB(_)), EnumSample.LetterC(_, _), _)));

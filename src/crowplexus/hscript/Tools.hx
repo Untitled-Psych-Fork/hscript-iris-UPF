@@ -240,6 +240,26 @@ class Tools {
 		};
 	}
 
+	public static inline function getKeyIterator<T>( e : Expr, callb : String -> String -> Expr -> T ) {
+		var key = null, value = null, it = e;
+		switch( expr(it) ) {
+		case EBinop("in", ekv, eiter):
+			switch( expr(ekv) ) {
+			case EBinop("=>",v1,v2):
+				switch( [expr(v1),expr(v2)] ) {
+				case [EIdent(v1), EIdent(v2)]:
+					key = v1;
+					value = v2;
+					it = eiter;
+				default:
+				}
+			default:
+			}
+		default:
+		}
+		return callb(key,value,it);
+	}
+
 	public inline static function last(arr: Array<String>): String
 		return arr[arr.length - 1];
 

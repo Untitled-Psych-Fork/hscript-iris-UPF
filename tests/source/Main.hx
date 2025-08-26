@@ -8,6 +8,7 @@ import crowplexus.hscript.Expr;
 import crowplexus.hscript.Tools;
 import crowplexus.hscript.scriptclass.IScriptedClass;
 import crowplexus.iris.Iris;
+import haxe.Constraints;
 
 @:build(macros.TestingMacro.build())
 class Main {
@@ -96,6 +97,7 @@ class Main {
 		trace(ScriptedGroupSample);
 		trace(ObjectSample);
 		trace(IntSample);
+		trace(cast([], IMap<Dynamic, Dynamic>));
 	}
 
 	static function init() {
