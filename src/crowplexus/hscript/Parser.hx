@@ -690,22 +690,18 @@ class Parser {
 	}
 
 	function makeBinop(op, e1, e) {
-		if(e == null && resumeErrors)
-			return mk(EBinop(op,e1,e),pmin(e1),pmax(e1));
-		return switch( expr(e) ) {
-			case EBinop(op2,e2,e3):
+		if (e == null && resumeErrors)
+			return mk(EBinop(op, e1, e), pmin(e1), pmax(e1));
+		return switch (expr(e)) {
+			case EBinop(op2, e2, e3):
 				var delta = opPriority.get(op) - opPriority.get(op2);
-				if( delta < 0 || (delta == 0 && !opRightAssoc.exists(op)) )
-					mk(EBinop(op2,makeBinop(op,e1,e2),e3),pmin(e1),pmax(e3));
-				else
-					mk(EBinop(op, e1, e), pmin(e1), pmax(e));
-			case ETernary(e2,e3,e4):
-				if( opRightAssoc.exists(op) )
-					mk(EBinop(op,e1,e),pmin(e1),pmax(e));
-				else
-					mk(ETernary(makeBinop(op, e1, e2), e3, e4), pmin(e1), pmax(e));
+				if (delta < 0
+					|| (delta == 0 && !opRightAssoc.exists(op))) mk(EBinop(op2, makeBinop(op, e1, e2), e3), pmin(e1),
+						pmax(e3)); else mk(EBinop(op, e1, e), pmin(e1), pmax(e));
+			case ETernary(e2, e3, e4):
+				if (opRightAssoc.exists(op)) mk(EBinop(op, e1, e), pmin(e1), pmax(e)); else mk(ETernary(makeBinop(op, e1, e2), e3, e4), pmin(e1), pmax(e));
 			default:
-				mk(EBinop(op,e1,e),pmin(e1),pmax(e));
+				mk(EBinop(op, e1, e), pmin(e1), pmax(e));
 		}
 	}
 
@@ -767,11 +763,11 @@ class Parser {
 				var eit = parseExpr();
 				ensure(TPClose);
 				var e = parseExpr();
-				switch( expr(eit) ) {
-					case EBinop("in",ev,eit):
-						switch( expr(ev) ) {
+				switch (expr(eit)) {
+					case EBinop("in", ev, eit):
+						switch (expr(ev)) {
 							case EIdent(v):
-								return mk(EFor(v,eit,e),p1,pmax(e));
+								return mk(EFor(v, eit, e), p1, pmax(e));
 							default:
 						}
 					default:
@@ -792,10 +788,10 @@ class Parser {
 				var e = if (tk == TSemicolon) null else parseExpr();
 				mk(EReturn(e), p1, if (e == null) tokenMax else pmax(e));
 			case "new":
-				var tp:TypePath = null;
-				if(allowTypes) {
-					var pt:CType = parseType();
-					switch(pt) {
+				var tp: TypePath = null;
+				if (allowTypes) {
+					var pt: CType = parseType();
+					switch (pt) {
 						case CTPath(ob):
 							tp = ob;
 						case _:
@@ -803,11 +799,11 @@ class Parser {
 					}
 					ensure(TPOpen);
 				} else {
-					var pkg:Array<String> = [];
+					var pkg: Array<String> = [];
 					pkg.push(getIdent());
-					while(true) {
+					while (true) {
 						var t = token();
-						switch(t) {
+						switch (t) {
 							case TDot:
 								pkg.push(getIdent());
 							case TPOpen:
@@ -1067,14 +1063,14 @@ class Parser {
 				mk(EEnum(name, fields, packageName?.split(".")));
 			case "super":
 				parseExprNext(mk(EConst(CSuper)));
-			case "cast" if(allowTypes):
-				var e:Expr = null;
-				var t:CType = null;
-				var shut:Bool = false;
-				if(maybe(TPOpen)) {
+			case "cast" if (allowTypes):
+				var e: Expr = null;
+				var t: CType = null;
+				var shut: Bool = false;
+				if (maybe(TPOpen)) {
 					shut = true;
 					e = parseExpr();
-					if(maybe(TComma)) {
+					if (maybe(TComma)) {
 						t = parseType();
 					}
 					ensure(TPClose);
@@ -1475,7 +1471,7 @@ class Parser {
 					return parseExprNext(mk(EUnop(op, false, e1), pmin(e1)));
 				}
 				return makeBinop(op, e1, parseExpr());
-			case TId(op) if(opPriority.exists(op)):
+			case TId(op) if (opPriority.exists(op)):
 				return makeBinop(op, e1, parseExpr());
 			case TDot | TQuestionDot:
 				var field = getIdent();

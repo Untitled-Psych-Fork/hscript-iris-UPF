@@ -27,11 +27,12 @@ class ScriptClass extends BaseScriptClass {
 	var ogInterp: Interp;
 
 	@:allow(crowplexus.hscript.Interp)
-	private function new(ogInterp: Interp, clsName: String, extendCls: String, fields: Array<BydFieldDecl>, ?metas:Metadata, ?pkg: Array<String>) {
+	private function new(ogInterp: Interp, clsName: String, extendCls: String, fields: Array<BydFieldDecl>, ?metas: Metadata, ?pkg: Array<String>) {
 		this.ogInterp = ogInterp;
 		this.name = clsName;
 		this.extend = extendCls;
-		if(metas != null) this.metas = metas;
+		if (metas != null)
+			this.metas = metas;
 		if (extendCls != null && ogInterp.imports.get(extendCls) is Class) {
 			this.superClassDecl = cast ogInterp.imports.get(extendCls);
 		} else if (extendCls != null && !(ogInterp.imports.get(extendCls) is Class)) {
@@ -133,7 +134,8 @@ class ScriptClass extends BaseScriptClass {
 		if (superClassDecl != null) {
 			var classFields = Type.getInstanceFields(superClassDecl);
 			if (classFields.contains("__sc_standClass"))
-				classFields = classFields.filter(f -> !StringTools.startsWith(f, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX) && f != "__sc_standClass");
+				classFields = classFields.filter(f -> !StringTools.startsWith(f, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX)
+					&& f != "__sc_standClass");
 			return [
 				for (f in this.fields)
 					if (!f.access.contains(AStatic) && !f.access.contains(AOverride)) f.name
@@ -195,7 +197,7 @@ class ScriptClass extends BaseScriptClass {
 		}
 	}
 
-	private function parseValDecl(decl: VarDecl):Dynamic {
+	private function parseValDecl(decl: VarDecl): Dynamic {
 		@:privateAccess
 		return if (decl.expr == null) {
 			null;

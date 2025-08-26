@@ -162,7 +162,8 @@ class ScriptClassInterp extends Interp {
 		if (scriptClass.superClass != null) {
 			if (scriptClass.superClass is IScriptedClass) {
 				if (scriptClass.superExistsFunction(field)) {
-					return call(null, Reflect.getProperty(scriptClass.superClass, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX + field), args);
+					return call(null, Reflect.getProperty(scriptClass.superClass, crowplexus.iris.macro.ScriptedClassMacro.SUPER_FUNCTION_PREFIX + field),
+						args);
 				} else
 					error(ECustom("Invalid Calling -> super." + field + "()"));
 			} else {

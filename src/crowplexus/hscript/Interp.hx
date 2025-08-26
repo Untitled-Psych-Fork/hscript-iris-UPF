@@ -202,9 +202,9 @@ class Interp {
 	var callTP: Bool;
 	var fieldDotRet: Array<String> = [];
 	var metas: Metadata = [];
-	var converted:Array<Dynamic> = [];
+	var converted: Array<Dynamic> = [];
 
-	//当字段为_时将会识别此值并捕获它（
+	// 当字段为_时将会识别此值并捕获它（
 	var added_value: Void->Dynamic = null;
 
 	#if hscriptPos
@@ -689,7 +689,8 @@ class Interp {
 					#end
 				}
 			case EIdent(id):
-				if(id == "_" && added_value != null) return added_value();
+				if (id == "_" && added_value != null)
+					return added_value();
 				if (id == "false" && id == "true" && id == "null")
 					return variables.get(id);
 				return convertDouble(resolve(id));
@@ -831,12 +832,12 @@ class Interp {
 				var args = new Array();
 
 				callTP = true;
-				var re:Dynamic = null;
+				var re: Dynamic = null;
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
 						final sureSuper = Tools.expr(e).match(EConst(CSuper));
-						var obj:Dynamic = null;
-						if(!sureSuper) {
+						var obj: Dynamic = null;
+						if (!sureSuper) {
 							fieldDotRet.push(f);
 							obj = expr(e);
 							fieldDotRet.pop();
@@ -844,16 +845,16 @@ class Interp {
 						if (obj == null && !sureSuper)
 							if (!s)
 								error(EInvalidAccess(f));
-						if(sureSuper) {
+						if (sureSuper) {
 							for (p in params) {
 								args.push(expr(p));
 							}
 							re = super_field_call(f, args);
-						} else if(f == "bind" && Reflect.isFunction(obj)) {
-							var devs:Array<String> = [];
-							var minParams:Int = 0;
-							for (i=>p in params) {
-								args[i] = if(Tools.expr(p).match(EIdent("_"))) {
+						} else if (f == "bind" && Reflect.isFunction(obj)) {
+							var devs: Array<String> = [];
+							var minParams: Int = 0;
+							for (i => p in params) {
+								args[i] = if (Tools.expr(p).match(EIdent("_"))) {
 									devs[i] = "_";
 									minParams++;
 									null;
@@ -861,14 +862,14 @@ class Interp {
 									expr(p);
 								}
 							}
-							re = Reflect.makeVarArgs(function(params:Array<Dynamic>) {
-								if(params.length < minParams) {
+							re = Reflect.makeVarArgs(function(params: Array<Dynamic>) {
+								if (params.length < minParams) {
 									var str = "Invalid number of parameters. Got " + params.length + ", required " + minParams + " for function 'bind'";
 									error(ECustom(str));
 								}
-								var forceArgs:Array<Dynamic> = [];
-								for(i=>arg in args) {
-									if(devs[i] != null) {
+								var forceArgs: Array<Dynamic> = [];
+								for (i => arg in args) {
+									if (devs[i] != null) {
 										forceArgs.push(params.shift());
 									} else {
 										forceArgs.push(arg);
@@ -876,8 +877,9 @@ class Interp {
 								}
 								return Reflect.callMethod(null, obj, forceArgs);
 							});
-						} else if(f == "match" && (Reflect.isEnumValue(obj) || obj is crowplexus.hscript.scriptenum.ScriptEnumValue)) {
-							if(params.length != 1) error(ECustom("Invalid number of parameters. Got " + params.length + ", required " + 1 + " for function 'match'"));
+						} else if (f == "match" && (Reflect.isEnumValue(obj) || obj is crowplexus.hscript.scriptenum.ScriptEnumValue)) {
+							if (params.length != 1)
+								error(ECustom("Invalid number of parameters. Got " + params.length + ", required " + 1 + " for function 'match'"));
 
 							final scripting = (obj is crowplexus.hscript.scriptenum.ScriptEnumValue);
 							re = doEnumMatch(obj, params[0], scripting);
@@ -910,17 +912,17 @@ class Interp {
 				forLoop(v, it, e);
 				return null;
 			case EForGen(it, e):
-			Tools.getKeyIterator(it, function(vk, vv, it) {
-				if( vk == null ) {
-					#if hscriptPos
-					curExpr = it;
-					#end
-					error(ECustom("Invalid for expression"));
-					return;
-				}
-				forKeyValueLoop(vk,vv,it,e);
-			});
-			return null;
+				Tools.getKeyIterator(it, function(vk, vv, it) {
+					if (vk == null) {
+						#if hscriptPos
+						curExpr = it;
+						#end
+						error(ECustom("Invalid for expression"));
+						return;
+					}
+					forKeyValueLoop(vk, vv, it, e);
+				});
+				return null;
 			case EBreak:
 				throw SBreak;
 			case EContinue:
@@ -1077,11 +1079,11 @@ class Interp {
 				}
 				return f;
 			case EArrayDecl(arr):
-				if( arr.length > 0 && Tools.expr(arr[0]).match(EBinop("=>", _)) ) {
+				if (arr.length > 0 && Tools.expr(arr[0]).match(EBinop("=>", _))) {
 					var keys = [];
 					var values = [];
-					for( e in arr ) {
-						switch(Tools.expr(e)) {
+					for (e in arr) {
+						switch (Tools.expr(e)) {
 							case EBinop("=>", eKey, eValue):
 								keys.push(expr(eKey));
 								values.push(expr(eValue));
@@ -1092,17 +1094,17 @@ class Interp {
 								error(ECustom("Invalid map key=>value expression"));
 						}
 					}
-					return makeMap(keys,values);
+					return makeMap(keys, values);
 				} else {
 					var a = new Array();
-					for( e in arr )
+					for (e in arr)
 						a.push(expr(e));
 					return a;
 				}
 			case EArray(e, index):
 				var arr: Dynamic = expr(e);
 				var index: Dynamic = expr(index);
-				var re:Dynamic = if (isMap(arr)) {
+				var re: Dynamic = if (isMap(arr)) {
 					getMapValue(arr, index);
 				} else {
 					arr[index];
@@ -1254,8 +1256,9 @@ class Interp {
 		return null;
 	}
 
-	private function stackPatternMatch(matched: Dynamic, match: Expr, casse: SwitchCase, typeof: Type.ValueType, ?inArg:Bool = false): Bool {
-		if(matched == null || match == null) return false;
+	private function stackPatternMatch(matched: Dynamic, match: Expr, casse: SwitchCase, typeof: Type.ValueType, ?inArg: Bool = false): Bool {
+		if (matched == null || match == null)
+			return false;
 
 		var realMatch = false;
 		switch (typeof) {
@@ -1273,7 +1276,7 @@ class Interp {
 											locals.set(id, {r: matched[i], const: false});
 										}
 									case _:
-										if(!stackPatternMatch(matched[i], e, casse, Type.typeof(matched[i]), true)) {
+										if (!stackPatternMatch(matched[i], e, casse, Type.typeof(matched[i]), true)) {
 											realMatch = false;
 										}
 								}
@@ -1281,8 +1284,7 @@ class Interp {
 						}
 					case _:
 						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
-							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
-							return true;
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true)) return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1306,7 +1308,7 @@ class Interp {
 											locals.set(id, {r: Reflect.getProperty(matched, ob.name), const: false});
 										}
 									case _:
-										var med:Dynamic = Reflect.getProperty(matched, ob.name);
+										var med: Dynamic = Reflect.getProperty(matched, ob.name);
 										if (!stackPatternMatch(med, ob.e, casse, Type.typeof(med), true)) {
 											realMatch = false;
 										}
@@ -1315,8 +1317,7 @@ class Interp {
 						}
 					case _:
 						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
-							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
-							return true;
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true)) return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1351,8 +1352,7 @@ class Interp {
 						}
 					case _:
 						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
-							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
-							return true;
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true)) return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
@@ -1387,28 +1387,28 @@ class Interp {
 						}
 					case _:
 						if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
-							&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
-							return true;
+							&& (casse.ifExpr == null || expr(casse.ifExpr) == true)) return true;
 				}
 				if (realMatch && (casse.ifExpr == null || expr(casse.ifExpr) == true)) {
 					return true;
 				}
 			default:
-				if(inArg) switch(Tools.expr(match)) {
-					case EBinop("=>", e1, e2):
-						added_value = () -> matched;
-						var value:Dynamic = expr(e1);
-						added_value = null;
-						switch(Tools.expr(e2)) {
-							case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
-								if(id != "_") {
-									locals.set(id, {r: value, const: false});
-								}
-							case _:
-						}
-						return true;
-					case _:
-				}
+				if (inArg)
+					switch (Tools.expr(match)) {
+						case EBinop("=>", e1, e2):
+							added_value = () -> matched;
+							var value: Dynamic = expr(e1);
+							added_value = null;
+							switch (Tools.expr(e2)) {
+								case EIdent(id) if (id != "false" && id != "true" && id != "trace"):
+									if (id != "_") {
+										locals.set(id, {r: value, const: false});
+									}
+								case _:
+							}
+							return true;
+						case _:
+					}
 				if ((!Type.enumEq(Tools.expr(match), EIdent("_")) && Tools.valueSwitchMatch(expr(match), matched))
 					&& (casse.ifExpr == null || expr(casse.ifExpr) == true))
 					return true;
@@ -1417,32 +1417,34 @@ class Interp {
 		return false;
 	}
 
-	function convertSimgle(v:Dynamic):Dynamic {
-		if(converted.length > 0) {
-			var sb:Dynamic = converted.pop();
-			if(sb is ISharedScript) {
-				if(v == cast(sb, ISharedScript).standard) v = sb;
-			} else if(sb is crowplexus.hscript.scriptclass.ScriptClassInstance) {
-				if(v == cast(sb, crowplexus.hscript.scriptclass.ScriptClassInstance).superClass) v = sb;
+	function convertSimgle(v: Dynamic): Dynamic {
+		if (converted.length > 0) {
+			var sb: Dynamic = converted.pop();
+			if (sb is ISharedScript) {
+				if (v == cast(sb, ISharedScript).standard)
+					v = sb;
+			} else if (sb is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+				if (v == cast(sb, crowplexus.hscript.scriptclass.ScriptClassInstance).superClass)
+					v = sb;
 			}
 		}
 
-		var i:Int = -1;
-		while(i++ < converted.length - 1) {
+		var i: Int = -1;
+		while (i++ < converted.length - 1) {
 			converted.pop();
 		}
 		return v;
 	}
 
-	function convertDouble(re:Dynamic):Dynamic {
+	function convertDouble(re: Dynamic): Dynamic {
 		if (fieldDotRet.length == 0) {
-			if(re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
+			if (re is crowplexus.hscript.scriptclass.ScriptClassInstance) {
 				var cls: crowplexus.hscript.scriptclass.ScriptClassInstance = cast(re, crowplexus.hscript.scriptclass.ScriptClassInstance);
 				if (cls.superClass != null) {
 					converted.push(cls);
 					return cls.superClass;
 				}
-			} else if(re is ISharedScript) {
+			} else if (re is ISharedScript) {
 				converted.push(re);
 				return cast(re, ISharedScript).standard;
 			}
@@ -1500,16 +1502,20 @@ class Interp {
 	 * 点击输入文本
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L568
 	 */
-	function makeIterator( v : Dynamic ) : Iterator<Dynamic> {
+	function makeIterator(v: Dynamic): Iterator<Dynamic> {
 		#if js
 		// don't use try/catch (very slow)
-		if( v is Array )
+		if (v is Array)
 			return (v : Array<Dynamic>).iterator();
-		if( v.iterator != null ) v = v.iterator();
+		if (v.iterator != null)
+			v = v.iterator();
 		#else
-		try v = v.iterator() catch( e : Dynamic ) {};
+		try
+			v = v.iterator()
+		catch (e:Dynamic) {};
 		#end
-		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
+		if (v.hasNext == null || v.next == null)
+			error(EInvalidIterator(v));
 		return v;
 	}
 
@@ -1517,22 +1523,26 @@ class Interp {
 	 * 点击输入文本
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L581
 	 */
-	function makeKeyValueIterator( v : Dynamic ) : KeyValueIterator<Dynamic,Dynamic> {
+	function makeKeyValueIterator(v: Dynamic): KeyValueIterator<Dynamic, Dynamic> {
 		#if js
 		// don't use try/catch (very slow)
-		if( v is Array )
+		if (v is Array)
 			return (v : Array<Dynamic>).keyValueIterator();
-		if( v.keyValueIterator != null ) v = v.keyValueIterator();
+		if (v.keyValueIterator != null)
+			v = v.keyValueIterator();
 		#else
 		#if cpp
 		// i need convert type to get map's keyValueIterator in cpp. (yeh
-		if(isMap(v)) {
+		if (isMap(v)) {
 			v = cast(v, IMap<Dynamic, Dynamic>).keyValueIterator();
 		} else
 		#end
-		try v = v.keyValueIterator() catch( e : Dynamic ) {};
+		try
+			v = v.keyValueIterator()
+		catch (e:Dynamic) {};
 		#end
-		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
+		if (v.hasNext == null || v.next == null)
+			error(EInvalidIterator(v));
 		return v;
 	}
 
@@ -1544,9 +1554,9 @@ class Interp {
 		var old = declared.length;
 		declared.push({n: n, old: locals.get(n)});
 		var it = makeIterator(expr(it));
-		while(it.hasNext()) {
+		while (it.hasNext()) {
 			locals.set(n, {r: it.next(), const: false});
-			if(!loopRun(() -> expr(e)))
+			if (!loopRun(() -> expr(e)))
 				break;
 		}
 		restore(old);
@@ -1561,11 +1571,11 @@ class Interp {
 		declared.push({n: vk, old: locals.get(vk)});
 		declared.push({n: vv, old: locals.get(vv)});
 		var it = makeKeyValueIterator(expr(it));
-		while(it.hasNext()) {
+		while (it.hasNext()) {
 			var v = it.next();
 			locals.set(vk, {r: v.key, const: false});
-			locals.set(vv, {r : v.value, const: false});
-			if(!loopRun(() -> expr(e)))
+			locals.set(vv, {r: v.value, const: false});
+			if (!loopRun(() -> expr(e)))
 				break;
 		}
 		restore(old);
@@ -1575,17 +1585,17 @@ class Interp {
 	 * 点击输入文本
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L621
 	 */
-	inline function loopRun( f : Void -> Void ) {
+	inline function loopRun(f: Void->Void) {
 		var cont = true;
 		try {
 			f();
-		} catch( err : Stop ) {
-			switch( err ) {
-			case SContinue:
-			case SBreak:
-				cont = false;
-			case SReturn:
-				throw err;
+		} catch (err:Stop) {
+			switch (err) {
+				case SContinue:
+				case SBreak:
+					cont = false;
+				case SReturn:
+					throw err;
 			}
 		}
 		return cont;
@@ -1607,59 +1617,60 @@ class Interp {
 	 * 对不起，我又干了（
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L649
 	 */
-	function makeMap( keys : Array<Dynamic>, values : Array<Dynamic> ) : Dynamic {
-		var isAllString:Bool = true;
-		var isAllInt:Bool = true;
-		var isAllObject:Bool = true;
-		var isAllEnum:Bool = true;
-		for( key in keys ) {
+	function makeMap(keys: Array<Dynamic>, values: Array<Dynamic>): Dynamic {
+		var isAllString: Bool = true;
+		var isAllInt: Bool = true;
+		var isAllObject: Bool = true;
+		var isAllEnum: Bool = true;
+		for (key in keys) {
 			isAllString = isAllString && (key is String);
 			isAllInt = isAllInt && (key is Int);
 			isAllObject = isAllObject && Reflect.isObject(key);
 			isAllEnum = isAllEnum && Reflect.isEnumValue(key);
 		}
-		if( isAllInt ) {
-			var m = new Map<Int,Dynamic>();
-			for( i => key in keys )
+		if (isAllInt) {
+			var m = new Map<Int, Dynamic>();
+			for (i => key in keys)
 				m.set(key, values[i]);
 			return m;
 		}
-		if( isAllString ) {
-			var m = new Map<String,Dynamic>();
-			for( i => key in keys )
+		if (isAllString) {
+			var m = new Map<String, Dynamic>();
+			for (i => key in keys)
 				m.set(key, values[i]);
 			return m;
 		}
-		if( isAllEnum ) {
-			var m = new haxe.ds.EnumValueMap<Dynamic,Dynamic>();
-			for( i => key in keys )
+		if (isAllEnum) {
+			var m = new haxe.ds.EnumValueMap<Dynamic, Dynamic>();
+			for (i => key in keys)
 				m.set(key, values[i]);
 			return m;
 		}
-		if( isAllObject ) {
-			var m = new Map<{},Dynamic>();
-			for( i => key in keys )
+		if (isAllObject) {
+			var m = new Map<{}, Dynamic>();
+			for (i => key in keys)
 				m.set(key, values[i]);
 			return m;
 		}
-		error(ECustom("Invalid map keys "+keys));
+		error(ECustom("Invalid map keys " + keys));
 		return null;
 	}
 
-	function doEnumMatch(matched:Dynamic, match:Expr, scripted:Bool):Bool {
-		if(matched == null || match == null) return false;
-		switch(Tools.expr(match)) {
+	function doEnumMatch(matched: Dynamic, match: Expr, scripted: Bool): Bool {
+		if (matched == null || match == null)
+			return false;
+		switch (Tools.expr(match)) {
 			case EParent(e):
 				return doEnumMatch(matched, e, scripted);
 			case ECall(e, args):
-				var oargs:Array<Dynamic> = ProxyType.enumParameters(matched) ?? [];
+				var oargs: Array<Dynamic> = ProxyType.enumParameters(matched) ?? [];
 				var e = expr(e);
-				var obj:Dynamic = ProxyReflect.getProperty(ProxyType.getEnum(matched), ProxyType.enumConstructor(matched));
-				if(Reflect.compareMethods(e, obj)) {
-					var ids:Array<Bool> = [];
-					for(i=>arg in args) {
-						switch(Tools.expr(arg)) {
-							case EIdent(id) if(id == "_"):
+				var obj: Dynamic = ProxyReflect.getProperty(ProxyType.getEnum(matched), ProxyType.enumConstructor(matched));
+				if (Reflect.compareMethods(e, obj)) {
+					var ids: Array<Bool> = [];
+					for (i => arg in args) {
+						switch (Tools.expr(arg)) {
+							case EIdent(id) if (id == "_"):
 								ids.push(true);
 							case _:
 								ids.push(doEnumMatch(oargs[i], arg, (oargs[i] is crowplexus.hscript.scriptenum.ScriptEnumValue)));
@@ -1669,10 +1680,9 @@ class Interp {
 				}
 				return false;
 			case _:
-				var arg:Dynamic = expr(match);
-				return if(scripted) cast(matched, crowplexus.hscript.scriptenum.ScriptEnumValue).compare(arg);
-				else Type.enumEq(matched, arg);
-			}
+				var arg: Dynamic = expr(match);
+				return if (scripted) cast(matched, crowplexus.hscript.scriptenum.ScriptEnumValue).compare(arg); else Type.enumEq(matched, arg);
+		}
 	}
 
 	function get(o: Dynamic, f: String): Dynamic {
@@ -1681,7 +1691,7 @@ class Interp {
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
 		/*@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
-			return o.__sc_standClass.sc_get(f);*/
+			return o.__sc_standClass.sc_get(f); */
 		if (o is ISharedScript)
 			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
@@ -1704,7 +1714,8 @@ class Interp {
 		@:privateAccess
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
 			cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_set(f, v);
-		else if(o is ISharedScript) cast(o, ISharedScript).hset(f, v);
+		else if (o is ISharedScript)
+			cast(o, ISharedScript).hset(f, v);
 		else
 			Reflect.setProperty(o, f, v);
 		return v;
@@ -1815,7 +1826,7 @@ class Interp {
 	function fcall(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
 		for (_using in usings) {
 			var v = _using.call(o, f, args);
-			if(v != null) {
+			if (v != null) {
 				return v.returnValue;
 			}
 		}

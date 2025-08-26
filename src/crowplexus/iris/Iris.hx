@@ -49,7 +49,7 @@ class Iris implements ISharedScript {
 				case TInt if (f == "hex"):
 					return {funName: f, signature: o, returnValue: StringTools.hex(o, args[0])};
 				case TClass(String):
-					var field:Dynamic = Reflect.getProperty(StringTools, f);
+					var field: Dynamic = Reflect.getProperty(StringTools, f);
 					if (Reflect.isFunction(field)) {
 						return {funName: f, signature: o, returnValue: Reflect.callMethod(StringTools, field, [o].concat(args))};
 					}
@@ -79,12 +79,11 @@ class Iris implements ISharedScript {
 	 * Contains proxies for classes. So they can be sandboxed or add extra functionality.
 	**/
 	@:unreflective public static var proxyImports: Map<String, Dynamic> = [
-		//base
+		// base
 		"Type" => crowplexus.hscript.proxy.ProxyType,
 		"Reflect" => crowplexus.hscript.proxy.ProxyReflect,
 		"Std" => crowplexus.hscript.proxy.ProxyStd,
-
-		//xml
+		// xml
 		"haxe.xml.Access" => crowplexus.hscript.proxy.haxe.xml.ProxyAccess,
 	];
 
@@ -182,8 +181,9 @@ class Iris implements ISharedScript {
 	**/
 	public var config: IrisConfig = null;
 
-	public var standard(get, never):Dynamic;
-	public function get_standard():Dynamic {
+	public var standard(get, never): Dynamic;
+
+	public function get_standard(): Dynamic {
 		return this;
 	}
 

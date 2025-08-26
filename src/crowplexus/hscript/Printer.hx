@@ -339,10 +339,10 @@ class Printer {
 				add(v);
 			case ECast(e, shut, t):
 				add("cast");
-				if(shut == true) {
+				if (shut == true) {
 					add("(");
 					expr(e);
-					if(t != null) {
+					if (t != null) {
 						add(", ");
 						addType(t);
 					}

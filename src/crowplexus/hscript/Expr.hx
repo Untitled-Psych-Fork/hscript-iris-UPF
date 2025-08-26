@@ -76,7 +76,7 @@ enum Expr
 	EIf(cond:Expr, e1:Expr, ?e2:Expr);
 	EWhile(cond:Expr, e:Expr);
 	EFor(v:String, it:Expr, e:Expr);
-	EForGen(it: Expr, e: Expr);
+	EForGen(it:Expr, e:Expr);
 	EBreak;
 	EContinue;
 	EFunction(args:Array<Argument>, e:Expr, depth:Int, ?name:String, ?ret:CType, ?access:Array<String>);

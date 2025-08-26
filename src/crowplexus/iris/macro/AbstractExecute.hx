@@ -6,24 +6,25 @@ import haxe.macro.Context;
 import haxe.macro.Type;
 
 class AbstractExecute {
-	public static inline var ABSTRACT_IMPLEMENTS_STUFFIX:String = "_SEX_AIS";
-	static var specifyAbstractPath:Null<String>;
-	static var specifyAbstract:Ref<AbstractType>;
+	public static inline var ABSTRACT_IMPLEMENTS_STUFFIX: String = "_SEX_AIS";
+	static var specifyAbstractPath: Null<String>;
+	static var specifyAbstract: Ref<AbstractType>;
 
 	public static function build(): Array<Field> {
 		var fields: Array<Field> = [];
 		final cls = Context.getLocalClass()?.get();
 		var metas = cls.meta.get();
-		if(metas != null) {
+		if (metas != null) {
 			final meta = Lambda.find(metas, m -> m.name == ":abstractAlias");
-			if(meta == null) Context.error("Class: " + Context.getLocalClass() + " Not Found meta -> 'abstractAlias'", Context.currentPos());
-			if(meta.params.length == 1) {
-				switch(meta.params[0].expr) {
+			if (meta == null)
+				Context.error("Class: " + Context.getLocalClass() + " Not Found meta -> 'abstractAlias'", Context.currentPos());
+			if (meta.params.length == 1) {
+				switch (meta.params[0].expr) {
 					case EConst(c):
-						switch(c) {
+						switch (c) {
 							case CString(con):
 								specifyAbstractPath = con;
-								switch(Context.getType(specifyAbstractPath)) {
+								switch (Context.getType(specifyAbstractPath)) {
 									case TAbstract(sb, params):
 										specifyAbstract = sb;
 									case _:
@@ -36,13 +37,14 @@ class AbstractExecute {
 				Context.error("Class: " + Context.getLocalClass() + "meta -> abstractAlias requested params only 1.", Context.currentPos());
 			}
 		}
-		if(specifyAbstract == null) Context.error("Invalid Abstract Alias -> '" + specifyAbstractPath + "'", Context.currentPos());
+		if (specifyAbstract == null)
+			Context.error("Invalid Abstract Alias -> '" + specifyAbstractPath + "'", Context.currentPos());
 		trace(specifyAbstract.get().resolveWrite);
 		return fields;
 	}
 }
 #else
 class AbstractExecute {
-	public static inline var ABSTRACT_EXECUTE_STUFFIX:String = "_SEX";
+	public static inline var ABSTRACT_EXECUTE_STUFFIX: String = "_SEX";
 }
 #end

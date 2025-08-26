@@ -225,7 +225,8 @@ class ProxyReflect {
 		Otherwise, including if `v` is null, the result is false.
 	**/
 	public static inline function isObject(v: Dynamic): Bool {
-		if(v is ScriptEnumValue) return false;
+		if (v is ScriptEnumValue)
+			return false;
 		return Reflect.isObject(v);
 	}
 
@@ -238,7 +239,8 @@ class ProxyReflect {
 		Otherwise, including if `v` is null, the result is false.
 	**/
 	public static inline function isEnumValue(v: Dynamic): Bool {
-		if(v is ScriptEnumValue) return true;
+		if (v is ScriptEnumValue)
+			return true;
 		return Reflect.isEnumValue(v);
 	}
 
