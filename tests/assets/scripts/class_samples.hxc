@@ -20,14 +20,9 @@ class MySample extends ScriptedBaseSample {
 var os = new ObjectSample();
 var sample = new MySample();
 
-var csx = {
-	sb: sample
-}
-
-trace(csx.sb.sb);
-csx.sb.sb++;
-trace(csx.sb.sb);
-
+trace(sample.sb);
+sample.sb++;
+trace(sample.sb);
 trace(sample);
 
 var gs = new GroupSample<BaseSample<Dynamic>>();
