@@ -1,7 +1,6 @@
 {
 	"name": "hscript-iris-improved",
 	"description": "Make New Features For HScript.",
-	"classPath": "src",
 	"version": "0.0.1",
 	"releasenote": "Improved `using`s, improved inner class importing.",
 	"license": "MIT",

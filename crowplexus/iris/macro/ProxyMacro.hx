@@ -12,23 +12,10 @@ import haxe.macro.TypeTools;
 class ProxyMacro {
 	public static inline var PREFIX:String = "crowplexus.hscript.proxy";
 
-	#if macro
-	static var map:Map<String, Expr> = [];
-	#end
-
-	public static macro function getProxyClasses():Expr {
-		#if macro
-		return {
-			expr: EArrayDecl([for(key=>value in map) {expr: EBinop(OpArrow, {expr: EConst(CString(key)), pos: Context.currentPos()}, value), pos: Context.currentPos()}]),
-			pos: Context.currentPos()
-		};
-		#else
-		return macro [];
-		#end
-	}
-
-	#if macro
-	public static function init() {
+	public static macro function getProxyClasses() {
+		#if (macro && !display)
+		trace(Context.getClassPath());
+		var map:Map<String, Expr> = [];
 		var standard = includeAndGetModules(PREFIX);
 		for(module in standard) {
 			for(type in module) {
@@ -41,8 +28,17 @@ class ProxyMacro {
 				}
 			}
 		}
+
+		return {
+			expr: EArrayDecl([for(key=>value in map) {expr: EBinop(OpArrow, {expr: EConst(CString(key)), pos: Context.currentPos()}, value), pos: Context.currentPos()}]),
+			pos: Context.currentPos()
+		};
+		#else
+		return macro [];
+		#end
 	}
 
+	#if macro
 	public static function includeAndGetModules(pack:String, ?rec = true, ?ignore:Array<String>, ?classPaths:Array<String>, strict = false):Array<Array<Type>> {
 		var modules:Array<Array<Type>> = [];
 
