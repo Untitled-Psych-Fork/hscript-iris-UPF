@@ -24,11 +24,13 @@ package crowplexus.hscript;
 
 import Type.ValueType;
 import crowplexus.hscript.Expr;
+import crowplexus.hscript.IHScriptCustomBehaviour;
 import crowplexus.hscript.Tools;
 import crowplexus.iris.Iris;
 import crowplexus.iris.IrisUsingClass;
 import crowplexus.iris.utils.UsingEntry;
 import haxe.Constraints.IMap;
+import haxe.EnumTools;
 import haxe.PosInfos;
 
 private enum Stop {
@@ -49,25 +51,39 @@ class DeclaredVar {
 	public var old: LocalVar;
 }
 
+@:allow(crowplexus.hscript.PropertyAccessor)
 class Interp {
+	public static var staticVariables: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
+	public static var getRedirects: Map<String, Dynamic->String->Dynamic> = [];
+	public static var setRedirects: Map<String, Dynamic->String->Dynamic->Dynamic> = [];
+
+	public var scriptObject(default, set): Dynamic;
+	public var parentInstance(default, set): Dynamic;
+
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
-
+	public var props: Map<String, Dynamic>;
 	var locals: Map<String, LocalVar>;
 	var binops: Map<String, Expr->Expr->Dynamic>;
+	var propertyLinks: Map<String, PropertyAccessor>;
 	#else
 	public var variables: Hash<Dynamic>;
 	public var imports: Hash<Dynamic>;
-
+	public var props: Hash<Dynamic>;
 	var locals: Hash<LocalVar>;
 	var binops: Hash<Expr->Expr->Dynamic>;
+	var propertyLinks: Hash<PropertyAccessor>;
 	#end
 
+	var _parentFields: Array<String> = [];
+	var __instanceFields: Array<String> = [];
 	var depth: Int;
 	var inTry: Bool;
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
+
+	@:noCompletion static var unpackClassCache: #if haxe3 Map<String, Dynamic> = new Map() #else Hash<Dynamic> = new Hash() #end;
 
 	#if hscriptPos
 	var curExpr: Expr;
@@ -75,11 +91,40 @@ class Interp {
 
 	public var showPosOnLog: Bool = true;
 
+	function set_scriptObject(v: Dynamic) {
+		__instanceFields = Type.getInstanceFields(Type.getClass(v));
+		return scriptObject = v;
+	}
+
+	function set_parentInstance(val: Dynamic): Dynamic {
+		if (val != null) {
+			switch (Type.typeof(val)) {
+				case Type.ValueType.TObject if (!(val is Enum)):
+					_parentFields = if (val is Class) Type.getClassFields(val) else Reflect.fields(val);
+				case Type.ValueType.TClass(_):
+					_parentFields = Type.getInstanceFields(Type.getClass(val));
+				case _:
+			}
+		}
+		if (_parentFields == null) _parentFields = [];
+		return parentInstance = val;
+	}
+
 	public function new() {
 		#if haxe3
 		locals = new Map();
+		variables = new Map<String, Dynamic>();
+		props = new Map<String, Dynamic>();
+		imports = new Map<String, Dynamic>();
+		binops = new Map();
+		propertyLinks = new Map();
 		#else
 		locals = new Hash();
+		variables = new Hash();
+		props = new Hash();
+		imports = new Hash();
+		binops = new Hash();
+		propertyLinks = new Hash();
 		#end
 		declared = new Array();
 		resetVariables();
@@ -87,14 +132,6 @@ class Interp {
 	}
 
 	private function resetVariables() {
-		#if haxe3
-		variables = new Map<String, Dynamic>();
-		imports = new Map<String, Dynamic>();
-		#else
-		variables = new Hash();
-		imports = new Hash();
-		#end
-
 		variables.set("null", null);
 		variables.set("true", true);
 		variables.set("false", false);
@@ -117,11 +154,6 @@ class Interp {
 
 	function initOps() {
 		var me = this;
-		#if haxe3
-		binops = new Map();
-		#else
-		binops = new Hash();
-		#end
 		binops.set("+", function(e1, e2) return me.expr(e1) + me.expr(e2));
 		binops.set("-", function(e1, e2) return me.expr(e1) - me.expr(e2));
 		binops.set("*", function(e1, e2) return me.expr(e1) * me.expr(e2));
@@ -162,7 +194,34 @@ class Interp {
 	}
 
 	public inline function setVar(name: String, v: Dynamic) {
-		variables.set(name, v);
+		if (propertyLinks.exists(name)) {
+			var l = propertyLinks.get(name);
+			if (l.inState)
+				l.set(name, v);
+			else
+				l.link_setFunc(v);
+			return;
+		}
+
+		if (staticVariables.exists(name)) {
+			staticVariables.set(name, v);
+		} else if (staticVariables.exists('$name;const')) {
+			warn(ECustom("Cannot reassign final, for constant expression -> " + name));
+		} else if (parentInstance != null && (_parentFields.contains(name) || _parentFields.contains('set_$name'))) {
+			Reflect.setProperty(parentInstance, name, v);
+		} else if (scriptObject != null) {
+			if (Type.typeof(scriptObject) == TObject) {
+				Reflect.setField(scriptObject, name, v);
+			} else if (__instanceFields.contains(name)) {
+				Reflect.setProperty(scriptObject, name, v);
+			} else if (__instanceFields.contains('set_$name')) {
+				Reflect.getProperty(scriptObject, 'set_$name')(v);
+			} else {
+				variables.set(name, v);
+			}
+		} else {
+			variables.set(name, v);
+		}
 	}
 
 	function assign(e1: Expr, e2: Expr): Dynamic {
@@ -170,9 +229,23 @@ class Interp {
 		switch (Tools.expr(e1)) {
 			case EIdent(id):
 				var l = locals.get(id);
-				if (l == null)
-					setVar(id, v)
-				else {
+				if (l == null) {
+					if (parentInstance != null && (_parentFields.contains(id) || _parentFields.contains('set_$id'))) {
+						Reflect.setProperty(parentInstance, id, v);
+					} else if (scriptObject != null) {
+						if (Type.typeof(scriptObject) == TObject) {
+							Reflect.setField(scriptObject, id, v);
+						} else if (__instanceFields.contains(id)) {
+							Reflect.setProperty(scriptObject, id, v);
+						} else if (__instanceFields.contains('set_$id')) {
+							Reflect.getProperty(scriptObject, 'set_$id')(v);
+						} else {
+							setVar(id, v);
+						}
+					} else {
+						setVar(id, v);
+					}
+				} else {
 					if (l.const != true)
 						l.r = v;
 					else
@@ -194,7 +267,6 @@ class Interp {
 				} else {
 					arr[index] = v;
 				}
-
 			default:
 				error(EInvalidOp("="));
 		}
@@ -212,9 +284,21 @@ class Interp {
 			case EIdent(id):
 				var l = locals.get(id);
 				v = fop(expr(e1), expr(e2));
-				if (l == null)
-					setVar(id, v)
-				else {
+				if (l == null) {
+					if (parentInstance != null && (_parentFields.contains(id) || _parentFields.contains('set_$id'))) {
+						Reflect.setProperty(parentInstance, id, v);
+					} else if (scriptObject != null) {
+						if (__instanceFields.contains(id)) {
+							Reflect.setProperty(scriptObject, id, v);
+						} else if (__instanceFields.contains('set_$id')) {
+							Reflect.getProperty(scriptObject, 'set_$id')(v);
+						} else {
+							setVar(id, v);
+						}
+					} else {
+						setVar(id, v);
+					}
+				} else {
 					if (l.const != true)
 						l.r = v;
 					else
@@ -256,7 +340,7 @@ class Interp {
 				var v: Dynamic = (l == null) ? resolve(id) : l.r;
 				function setTo(a) {
 					if (l == null)
-						setVar(id, a)
+						setVar(id, a);
 					else {
 						if (l.const != true)
 							l.r = a;
@@ -264,13 +348,11 @@ class Interp {
 							error(ECustom("Cannot reassign final, for constant expression -> " + id));
 					}
 				}
-				if (l == null) {
-					if (prefix) {
-						v += delta;
-						setTo(v);
-					} else
-						setTo(v + delta);
-				}
+				if (prefix) {
+					v += delta;
+					setTo(v);
+				} else
+					setTo(v + delta);
 				return v;
 			case EField(e, f, s):
 				var obj = expr(e);
@@ -326,7 +408,7 @@ class Interp {
 	function exprReturn(e): Dynamic {
 		try {
 			return expr(e);
-		} catch (e:Stop) {
+		} catch (e: Stop) {
 			switch (e) {
 				case SBreak:
 					throw "Invalid break";
@@ -383,23 +465,56 @@ class Interp {
 	}
 
 	function resolve(id: String): Dynamic {
-		if (locals.exists(id)) {
-			var l = locals.get(id);
-			return l.r;
+		var l = locals.get(id);
+		if (l != null) return l.r;
+
+		if (propertyLinks.exists(id)) {
+			var l = propertyLinks.get(id);
+			if (l.inState)
+				return l.get(id);
+			else
+				return l.link_getFunc();
 		}
 
-		if (variables.exists(id)) {
-			var v = variables.get(id);
-			return v;
+		if (staticVariables.exists(id))
+			return staticVariables.get(id);
+		else if (staticVariables.exists('$id;const'))
+			return staticVariables.get('$id;const');
+
+		if (variables.exists(id))
+			return variables.get(id);
+
+		if (parentInstance != null) {
+			if (id == "this")
+				return parentInstance;
+			if (_parentFields.contains(id) || _parentFields.contains('get_$id'))
+				return Reflect.getProperty(parentInstance, id);
 		}
 
-		if (imports.exists(id)) {
-			var v = imports.get(id);
-			return v;
+		if (scriptObject != null) {
+			if (id == "this")
+				return scriptObject;
+			if (Type.typeof(scriptObject) == TObject && Reflect.hasField(scriptObject, id))
+				return Reflect.field(scriptObject, id);
+			if (__instanceFields.contains(id))
+				return Reflect.getProperty(scriptObject, id);
+			if (__instanceFields.contains('get_$id'))
+				return Reflect.getProperty(scriptObject, 'get_$id')();
+		}
+
+		if (imports.exists(id))
+			return imports.get(id);
+
+		if (unpackClassCache.exists(id))
+			return unpackClassCache.get(id);
+
+		var cl = Type.resolveClass(id);
+		if (cl != null) {
+			unpackClassCache.set(id, cl);
+			return cl;
 		}
 
 		error(EUnknownVariable(id));
-
 		return null;
 	}
 
@@ -427,9 +542,54 @@ class Interp {
 				}
 			case EIdent(id):
 				return resolve(id);
-			case EVar(n, _, v, isConst):
-				declared.push({n: n, old: locals.get(n)});
-				locals.set(n, {r: (v == null) ? null : expr(v), const: isConst});
+			case EVar(n, _, v, getter, setter, isConst, s):
+				if (getter == null) getter = "default";
+				if (setter == null) setter = "default";
+				var v = (v == null ? null : expr(v));
+				if (s == true) {
+					if (!staticVariables.exists(n) && !staticVariables.exists(n + ";const")) {
+						if (isConst)
+							staticVariables.set(n + ";const", v);
+						else {
+							staticVariables.set(n, v);
+							if (getter != "default" || setter != "default") {
+								propertyLinks.set(n, new PropertyAccessor(this, () -> {
+									if (staticVariables.exists(n))
+										return staticVariables.get(n);
+									else
+										throw error(EUnknownVariable(n));
+									return null;
+								}, (val) -> {
+									if (staticVariables.exists(n))
+										staticVariables.set(n, val);
+									else
+										throw error(EUnknownVariable(n));
+									return val;
+								}, getter, setter, true));
+							}
+						}
+					}
+				} else {
+					if (!isConst && (getter != "default" || setter != "default")) {
+						props.set(n, v);
+						propertyLinks.set(n, new PropertyAccessor(this, () -> {
+							if (props.exists(n))
+								return props.get(n);
+							else
+								throw error(EUnknownVariable(n));
+							return null;
+						}, (val) -> {
+							if (props.exists(n))
+								props.set(n, val);
+							else
+								throw error(EUnknownVariable(n));
+							return val;
+						}, getter, setter));
+					} else {
+						declared.push({n: n, old: locals.get(n)});
+						locals.set(n, {r: v, const: isConst});
+					}
+				}
 				return null;
 			case EParent(e):
 				return expr(e);
@@ -454,29 +614,22 @@ class Interp {
 				return fop(e1, e2);
 			case EUnop(op, prefix, e):
 				return switch (op) {
-					case "!":
-						expr(e) != true;
-					case "-":
-						-expr(e);
-					case "++":
-						increment(e, prefix, 1);
-					case "--":
-						increment(e, prefix, -1);
+					case "!": expr(e) != true;
+					case "-": -expr(e);
+					case "++": increment(e, prefix, 1);
+					case "--": increment(e, prefix, -1);
 					case "~":
 						#if (neko && !haxe3)
 						haxe.Int32.complement(expr(e));
 						#else
 						~expr(e);
 						#end
-					default:
-						error(EInvalidOp(op));
-						null;
+					default: error(EInvalidOp(op)); null;
 				}
 			case ECall(e, params):
 				var args = new Array();
 				for (p in params)
 					args.push(expr(p));
-
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
 						var obj = expr(e);
@@ -506,29 +659,24 @@ class Interp {
 				returnValue = e == null ? null : expr(e);
 				throw SReturn;
 			case EImport(v, as):
-				final aliasStr = (as != null ? " named " + as : ""); // for errors
+				final aliasStr = (as != null ? " named " + as : "");
 				if (Iris.blocklistImports.contains(v)) {
 					error(ECustom("You cannot add a blacklisted import, for class " + v + aliasStr));
 					return null;
 				}
-
 				var n = Tools.last(v.split("."));
 				if (imports.exists(n))
 					return imports.get(n);
-
 				var c: Dynamic = getOrImportClass(v);
-				if (c == null) // if it's still null then throw an error message.
+				if (c == null)
 					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
 				else {
 					imports.set(n, c);
 					if (as != null)
 						imports.set(as, c);
-					// resembles older haxe versions where you could use both the alias and the import
-					// for all the "Colour" enjoyers :D
 				}
-				return null; // yeah. -Crow
-
-			case EFunction(params, fexpr, name, _):
+				return null;
+			case EFunction(params, fexpr, name, _, s):
 				var capturedLocals = duplicate(locals);
 				var me = this;
 				var hasOpt = false, minParams = 0;
@@ -545,7 +693,6 @@ class Interp {
 								str += " for function '" + name + "'";
 							error(ECustom(str));
 						}
-						// make sure mandatory args are forced
 						var args2 = [];
 						var extraParams = args.length - minParams;
 						var pos = 0;
@@ -570,7 +717,7 @@ class Interp {
 					if (inTry)
 						try {
 							r = me.exprReturn(fexpr);
-						} catch (e:Dynamic) {
+						} catch (e: Dynamic) {
 							me.locals = old;
 							me.depth = depth;
 							#if neko
@@ -589,14 +736,16 @@ class Interp {
 				var f = Reflect.makeVarArgs(f);
 				if (name != null) {
 					if (depth == 0) {
-						// global function
-						variables.set(name, f);
+						if (s == true) {
+							if (!staticVariables.exists(name))
+								staticVariables.set(name, f);
+						} else
+							variables.set(name, f);
 					} else {
-						// function-in-function is a local function
 						declared.push({n: name, old: locals.get(name)});
 						var ref: LocalVar = {r: f, const: false};
 						locals.set(name, ref);
-						capturedLocals.set(name, ref); // allow self-recursion
+						capturedLocals.set(name, ref);
 					}
 				}
 				return f;
@@ -611,15 +760,15 @@ class Interp {
 					for (e in arr) {
 						switch (Tools.expr(e)) {
 							case EBinop("=>", eKey, eValue): {
-									var key: Dynamic = expr(eKey);
-									var value: Dynamic = expr(eValue);
-									isAllString = isAllString && (key is String);
-									isAllInt = isAllInt && (key is Int);
-									isAllObject = isAllObject && Reflect.isObject(key);
-									isAllEnum = isAllEnum && Reflect.isEnumValue(key);
-									keys.push(key);
-									values.push(value);
-								}
+								var key: Dynamic = expr(eKey);
+								var value: Dynamic = expr(eValue);
+								isAllString = isAllString && (key is String);
+								isAllInt = isAllInt && (key is Int);
+								isAllObject = isAllObject && Reflect.isObject(key);
+								isAllEnum = isAllEnum && Reflect.isEnumValue(key);
+								keys.push(key);
+								values.push(value);
+							}
 							default: throw("=> expected");
 						}
 					}
@@ -670,14 +819,12 @@ class Interp {
 					restore(old);
 					inTry = oldTry;
 					return v;
-				} catch (err:Stop) {
+				} catch (err: Stop) {
 					inTry = oldTry;
 					throw err;
-				} catch (err:Dynamic) {
-					// restore vars
+				} catch (err: Dynamic) {
 					restore(old);
 					inTry = oldTry;
-					// declare 'v'
 					declared.push({n: n, old: locals.get(n)});
 					locals.set(n, {r: err, const: false});
 					var v: Dynamic = expr(ecatch);
@@ -733,7 +880,6 @@ class Interp {
 											str += " for enum '" + enumName + "'";
 										error(ECustom(str));
 									}
-									// make sure mandatory args are forced
 									var args2 = [];
 									var extraParams = args.length - minParams;
 									var pos = 0;
@@ -751,11 +897,9 @@ class Interp {
 								return new EnumValue(enumName, name, index, args);
 							};
 							var f = Reflect.makeVarArgs(f);
-
 							Reflect.setField(obj, name, f);
 					}
 				}
-
 				variables.set(enumName, obj);
 			case EDirectValue(value):
 				return value;
@@ -770,7 +914,7 @@ class Interp {
 		do {
 			try {
 				expr(e);
-			} catch (err:Stop) {
+			} catch (err: Stop) {
 				switch (err) {
 					case SContinue:
 					case SBreak:
@@ -788,7 +932,7 @@ class Interp {
 		while (expr(econd) == true) {
 			try {
 				expr(e);
-			} catch (err:Stop) {
+			} catch (err: Stop) {
 				switch (err) {
 					case SContinue:
 					case SBreak:
@@ -808,7 +952,7 @@ class Interp {
 		#else
 		try
 			v = v.iterator()
-		catch (e:Dynamic) {};
+		catch (e: Dynamic) {};
 		#end
 		if (v.hasNext == null || v.next == null)
 			error(EInvalidIterator(v));
@@ -825,7 +969,7 @@ class Interp {
 			locals.set(n, {r: _itNext(), const: false});
 			try {
 				expr(e);
-			} catch (err:Stop) {
+			} catch (err: Stop) {
 				switch (err) {
 					case SContinue:
 					case SBreak:
@@ -853,30 +997,55 @@ class Interp {
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
-		return {
-			#if php
-			// https://github.com/HaxeFoundation/haxe/issues/4915
-			try {
-				Reflect.getProperty(o, f);
-			} catch (e:Dynamic) {
-				Reflect.field(o, f);
-			}
-			#else
-			Reflect.getProperty(o, f);
-			#end
+		var cl: String = switch (Type.typeof(o)) {
+			case TNull: "Null";
+			case TInt: "Int";
+			case TFloat: "Float";
+			case TBool: "Bool";
+			case _: null;
+		};
+		var redirect: Dynamic->String->Dynamic = getRedirects.exists(cl = Type.getClassName(Type.getClass(o))) ? getRedirects[cl] : null;
+		if (redirect != null)
+			return redirect(o, f);
+		if (o is IHScriptCustomBehaviour) {
+			var obj = cast(o, IHScriptCustomBehaviour);
+			return obj.hget(f);
 		}
+		#if php
+		try {
+			return Reflect.getProperty(o, f);
+		} catch (e: Dynamic) {
+			return Reflect.field(o, f);
+		}
+		#else
+		var v = Reflect.getProperty(o, f);
+		if (v == null)
+			v = Reflect.getProperty(Type.getClass(o), f);
+		return v;
+		#end
 	}
 
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
+		var cl: String = switch (Type.typeof(o)) {
+			case TNull: "Null";
+			case TInt: "Int";
+			case TFloat: "Float";
+			case TBool: "Bool";
+			case _: null;
+		};
+		var redirect: Dynamic->String->Dynamic->Dynamic = setRedirects.exists(cl = Type.getClassName(Type.getClass(o))) ? setRedirects[cl] : null;
+		if (redirect != null)
+			return redirect(o, f, v);
+		if (o is IHScriptCustomBehaviour) {
+			var obj = cast(o, IHScriptCustomBehaviour);
+			return obj.hset(f, v);
+		}
 		Reflect.setProperty(o, f, v);
 		return v;
 	}
 
-	/**
-	 * Meant for people to add their own usings.
-	**/
 	function registerUsingLocal(name: String, call: UsingCall): UsingEntry {
 		var entry = new UsingEntry(name, call);
 		usings.push(entry);
@@ -891,7 +1060,6 @@ class Interp {
 				return;
 			}
 		}
-
 		var cls = Tools.getClass(name);
 		if (cls != null) {
 			var fieldName = '__irisUsing_' + StringTools.replace(name, ".", "_");
@@ -899,62 +1067,41 @@ class Interp {
 				var fields = Reflect.field(cls, fieldName);
 				if (fields == null)
 					return;
-
 				var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
 					if (!fields.exists(f))
 						return null;
 					var type: ValueType = Type.typeof(o);
 					var valueType: ValueType = fields.get(f);
-
-					// If we figure out a better way to get the types as the real ValueType, we can use this instead
-					// if (Type.enumEq(valueType, type))
-					//	return Reflect.callMethod(cls, Reflect.field(cls, f), [o].concat(args));
-
 					var canCall = valueType == null ? true : switch (valueType) {
-						case TEnum(null):
-							type.match(TEnum(_));
-						case TClass(null):
-							type.match(TClass(_));
-						case TClass(IMap): // if we don't check maps like this, it just doesn't work
+						case TEnum(null): type.match(TEnum(_));
+						case TClass(null): type.match(TClass(_));
+						case TClass(IMap):
 							type.match(TClass(IMap) | TClass(haxe.ds.ObjectMap) | TClass(haxe.ds.StringMap) | TClass(haxe.ds.IntMap) | TClass(haxe.ds.EnumValueMap));
-						default:
-							Type.enumEq(type, valueType);
+						default: Type.enumEq(type, valueType);
 					}
-
 					return canCall ? Reflect.callMethod(cls, Reflect.field(cls, f), [o].concat(args)) : null;
 				});
-
 				#if IRIS_DEBUG
 				trace("Registered macro based using entry for " + name);
 				#end
-
 				Iris.registeredUsingEntries.push(entry);
 				usings.push(entry);
 				return;
 			}
-
-			// Use reflection to generate the using entry
 			var entry = new UsingEntry(name, function(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
 				if (!Reflect.hasField(cls, f))
 					return null;
 				var field = Reflect.field(cls, f);
 				if (!Reflect.isFunction(field))
 					return null;
-
-				// invalid if the function has no arguments
 				var totalArgs = Tools.argCount(field);
 				if (totalArgs == 0)
 					return null;
-
-				// todo make it check if the first argument is the correct type
-
 				return Reflect.callMethod(cls, field, [o].concat(args));
 			});
-
 			#if IRIS_DEBUG
 			trace("Registered reflection based using entry for " + name);
 			#end
-
 			Iris.registeredUsingEntries.push(entry);
 			usings.push(entry);
 			return;
@@ -962,18 +1109,6 @@ class Interp {
 		warn(ECustom("Unknown using class " + name));
 	}
 
-	/**
-	 * List of components that allow using static methods on objects.
-	 * This only works if you do
-	 * ```haxe
-	 * var result = "Hello ".trim();
-	 * ```
-	 * and not
-	 * ```haxe
-	 * var trim = "Hello ".trim;
-	 * var result = trim();
-	 * ```
-	 */
 	var usings: Array<UsingEntry> = [];
 
 	function fcall(o: Dynamic, f: String, args: Array<Dynamic>): Dynamic {
@@ -995,4 +1130,4 @@ class Interp {
 			c = resolve(cl);
 		return Type.createInstance(c, args);
 	}
-}
+	}

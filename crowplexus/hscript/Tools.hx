@@ -28,7 +28,7 @@ class Tools {
 	public static function iter(e: Expr, f: Expr->Void) {
 		switch (expr(e)) {
 			case EConst(_), EIdent(_):
-			case EVar(_, _, e, _):
+			case EVar(_, _, e, getter, setter, _, s):
 				if (e != null)
 					f(e);
 			case EParent(e):
@@ -62,7 +62,7 @@ class Tools {
 				f(it);
 				f(e);
 			case EBreak, EContinue:
-			case EFunction(_, e, _, _):
+			case EFunction(_, e, _, _, s):
 				f(e);
 			case EReturn(e):
 				if (e != null)

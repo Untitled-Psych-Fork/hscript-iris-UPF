@@ -289,9 +289,9 @@ class Iris {
 	 * Appends Default Classes/Enums for the Script to use.
 	**/
 	public function preset(): Void {
-		set("Std", Std); // TODO: add a proxy for std
+		/*set("Std", Std);
 		set("StringTools", StringTools);
-		set("Math", Math);
+		set("Math", Math);*/
 		#if hscriptPos
 		// overriding trace for good measure.
 		// if you're a game developer or a fnf modder (hi guys),
