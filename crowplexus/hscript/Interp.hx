@@ -936,7 +936,7 @@ class Interp {
 
 				#if STAR_CLASSES
 				if(star == true) {
-					final map = crowplexus.iris.macro.StarClassesMacro.packageClasses;
+					final map = Iris.starPackageClasses;
 					if(map.exists(v)) for(v in map[v]) {
 						if (Iris.blocklistImports.contains(v.name)) {
 							error(ECustom("You cannot add a blacklisted import, for class " + v.name));

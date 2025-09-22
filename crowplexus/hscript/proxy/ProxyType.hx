@@ -109,6 +109,9 @@ class ProxyType {
 		The class name must not include any type parameters.
 	**/
 	public inline static function resolveClass(name: String): Dynamic {
+		if (crowplexus.iris.Iris.proxyImports.get(name) != null) {
+			return crowplexus.iris.Iris.proxyImports.get(name);
+		}
 		if (Interp.existsScriptClass(name)) {
 			return Interp.resolveScriptClass(name);
 		}

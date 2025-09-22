@@ -8,9 +8,9 @@ import crowplexus.iris.ErrorSeverity;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.utils.UsingEntry;
 import crowplexus.hscript.ISharedScript;
-import crowplexus.iris.macro.StarClassesMacro;
 
 using crowplexus.iris.utils.Ansi;
+using StringTools;
 
 @:structInit
 class IrisCall {
@@ -69,11 +69,6 @@ class Iris implements ISharedScript {
 		}),
 	];
 
-	public static var starPackageClasses(get, never): Map<String, Array<{var name:String; var value:Dynamic;}>>;
-	public static function get_starPackageClasses(): Map<String, Array<{var name:String; var value:Dynamic;}>> {
-		return StarClassesMacro.packageClasses;
-	}
-
 	/**
 	 * Contains Classes/Enums that cannot be accessed via HScript.
 	 *
@@ -85,6 +80,31 @@ class Iris implements ISharedScript {
 	 * Contains proxies for classes. So they can be sandboxed or add extra functionality.
 	**/
 	@:unreflective public static var proxyImports: Map<String, Dynamic> = crowplexus.iris.macro.ProxyMacro.getProxyClasses();
+
+	@:unreflective public static var starPackageClasses:Map<String, Array<{var name:String; var value:Dynamic;}>> = #if STAR_CLASSES {
+		var r:Array<String> = cast haxe.rtti.Meta.getType(Iris)?.classes ?? [];
+		var map = new Map<String, Array<{var name:String; var value:Dynamic;}>>();
+
+		for (i in r) {
+			final lastIndex = i.lastIndexOf(".");
+			final pack = lastIndex > -1 ? i.substr(0, lastIndex) : "";
+			final lastName = i.substr(lastIndex > -1 ? lastIndex + 1 : 0);
+
+			if (lastIndex > -1 && i.indexOf('_Impl_') == -1 && pack.trim() != "")
+			{
+				var c = Iris.proxyImports.get(i) ?? crowplexus.hscript.proxy.ProxyType.resolveClass(i);
+				if (c != null) {
+					if(!map.exists(pack)) map.set(pack, []);
+					map[pack].push({name: lastName, value: c});
+				}
+			}
+		}
+
+		map;
+	}
+	#else
+	[]
+	#end;
 
 	public static function addBlocklistImport(name: String): Void {
 		blocklistImports.push(name);
