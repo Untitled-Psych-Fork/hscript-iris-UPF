@@ -8,6 +8,7 @@ import crowplexus.iris.ErrorSeverity;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.utils.UsingEntry;
 import crowplexus.hscript.ISharedScript;
+import crowplexus.iris.macro.StarClassesMacro;
 
 using crowplexus.iris.utils.Ansi;
 
@@ -67,6 +68,11 @@ class Iris implements ISharedScript {
 			return null;
 		}),
 	];
+
+	public static var starPackageClasses(get, never): Map<String, Array<{var name:String; var value:Dynamic;}>>;
+	public static function get_starPackageClasses(): Map<String, Array<{var name:String; var value:Dynamic;}>> {
+		return StarClassesMacro.packageClasses;
+	}
 
 	/**
 	 * Contains Classes/Enums that cannot be accessed via HScript.

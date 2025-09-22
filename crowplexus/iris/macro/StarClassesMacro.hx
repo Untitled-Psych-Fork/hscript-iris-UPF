@@ -17,6 +17,7 @@ class StarClassesMacro {
 	public static inline var thisName:String = "crowplexus.iris.macro.StarClassesMacro";
 
 	macro static function build() {
+		#if (macro && !display)
 		Context.onGenerate(function(types) {
 			var names = [],
 				self = TypeTools.getClass(Context.getType(thisName));
@@ -40,6 +41,9 @@ class StarClassesMacro {
 			self.meta.add('classes', names, self.pos);
 		});
 		return macro cast haxe.rtti.Meta.getType($p{thisName.split('.')});
+		#else
+		return macro cast {classes: ([]: Array<String>)};
+		#end
 	}
 
 	#if !macro
