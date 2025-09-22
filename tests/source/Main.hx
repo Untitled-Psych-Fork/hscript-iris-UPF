@@ -84,6 +84,11 @@ class Main {
 			script.call("onCreate");
 	}
 
+	public static function test_import_star() {
+		var script: HScript = new HScript("import_star");
+		script.execute();
+	}
+
 	public static function test_extra() {
 		var script: HScript = new HScript("extra");
 		script.execute();

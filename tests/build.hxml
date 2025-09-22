@@ -2,6 +2,7 @@
 -D hscriptPos
 -D analyzer-optimize
 -D IRIS_DEBUG
+-D STAR_CLASSES
 
 -cp source
 -main Main

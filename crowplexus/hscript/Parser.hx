@@ -940,13 +940,14 @@ class Parser {
 					}
 					t = token();
 					switch (t) {
-						case TOp("*"): star = true;
+						case TOp("*") if(!star): star = true;
 						case TId(id): path.push(id);
 						default: unexpected(t);
 					}
 				}
 
 				if (maybe(TId("as"))) {
+					if(star) unexpected(TId("as"));
 					asStr = getIdent();
 					if (asStr == null || asStr == "null" || asStr == "")
 						unexpected(TId("as"));
@@ -958,7 +959,7 @@ class Parser {
 						null;
 					}
 				 */
-				mk(EImport(path.join('.'), asStr));
+				mk(EImport(path.join('.'), asStr, star));
 			case "class":
 				if (abductCount > 0)
 					unexpected(TId(id));

@@ -147,7 +147,7 @@ class Interp {
 	/**
 	 * 返回值将会决定是否会颠覆原有的import体系
 	 */
-	public var importHandler: (String, String) -> Bool;
+	public var importHandler: (String, String, Null<Bool>) -> Bool;
 
 	#if haxe3
 	// 懒得直接在代码上区分了，不如多开一个图来的划算
@@ -930,57 +930,74 @@ class Interp {
 			case EReturn(e):
 				returnValue = e == null ? null : expr(e);
 				throw SReturn;
-			case EImport(v, as):
-				if (importHandler != null && importHandler(v, as))
+			case EImport(v, as, star):
+				if (importHandler != null && importHandler(v, as, star))
 					return null;
 
-				final aliasStr = (as != null ? " named " + as : ""); // for errors
-				if (Iris.blocklistImports.contains(v)) {
-					error(ECustom("You cannot add a blacklisted import, for class " + v + aliasStr));
-					return null;
-				}
-
-				var n = Tools.last(v.split("."));
-				if (imports.exists(n))
-					return imports.get(n);
-
-				var c: Dynamic = getOrImportClass(v);
-				if (c == null) {
-					if (allowAbstractHappened && v.lastIndexOf(".") > 0) {
-						var subv: String = v.substr(0, v.lastIndexOf("."));
-						var suffix: Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
-						var subc: Dynamic = getOrImportClass(subv);
-						while (subv.lastIndexOf(".") > 0 && subc == null) {
-							suffix.push(subv.substr(subv.lastIndexOf(".") + 1));
-							subv = subv.substr(0, subv.lastIndexOf("."));
-							subc = ProxyType.resolveClass(subv);
+				#if STAR_CLASSES
+				if(star == true) {
+					final map = crowplexus.iris.macro.StarClassesMacro.packageClasses;
+					if(map.exists(v)) for(v in map[v]) {
+						if (Iris.blocklistImports.contains(v.name)) {
+							error(ECustom("You cannot add a blacklisted import, for class " + v.name));
+							return null;
 						}
 
-						if (subc != null) {
-							if (suffix.length > 1)
-								return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+						if (!imports.exists(v.name))
+							imports.set(v.name, v.value);
+					}
+				} else
+				#end
+				{
 
-							var fields: Array<String> = ProxyType.getClassFields(subc).concat(ProxyReflect.fields(subc));
-							var fv: Dynamic = ProxyReflect.getProperty(subc, suffix[0]);
-							if (fields.contains(suffix[0])
-								|| (!(subc is crowplexus.hscript.scriptclass.ScriptClass) && fields.contains("get_" + suffix[0]))
-								|| fv != null) {
-								imports.set((as != null ? as : suffix[0]), fv);
-								return null;
-							} else {
-								return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+					final aliasStr = (as != null ? " named " + as : ""); // for errors
+					if (Iris.blocklistImports.contains(v)) {
+						error(ECustom("You cannot add a blacklisted import, for class " + v + aliasStr));
+						return null;
+					}
+
+					var n = Tools.last(v.split("."));
+					if (imports.exists(n))
+						return imports.get(n);
+
+					var c: Dynamic = getOrImportClass(v);
+					if (c == null) {
+						if (allowAbstractHappened && v.lastIndexOf(".") > 0) {
+							var subv: String = v.substr(0, v.lastIndexOf("."));
+							var suffix: Array<String> = [v.substr(v.lastIndexOf(".") + 1)];
+							var subc: Dynamic = getOrImportClass(subv);
+							while (subv.lastIndexOf(".") > 0 && subc == null) {
+								suffix.push(subv.substr(subv.lastIndexOf(".") + 1));
+								subv = subv.substr(0, subv.lastIndexOf("."));
+								subc = ProxyType.resolveClass(subv);
+							}
+
+							if (subc != null) {
+								if (suffix.length > 1)
+									return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+
+								var fields: Array<String> = ProxyType.getClassFields(subc).concat(ProxyReflect.fields(subc));
+								var fv: Dynamic = ProxyReflect.getProperty(subc, suffix[0]);
+								if (fields.contains(suffix[0])
+									|| (!(subc is crowplexus.hscript.scriptclass.ScriptClass) && fields.contains("get_" + suffix[0]))
+									|| fv != null) {
+									imports.set((as != null ? as : suffix[0]), fv);
+									return null;
+								} else {
+									return warn(ECustom("Class '" + subv + "' does not define field -> '" + suffix.join(".") + "'"));
+								}
 							}
 						}
+						return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
+					} else {
+						imports.set(n, c);
+						if (as != null)
+							imports.set(as, c);
+						// resembles older haxe versions where you could use both the alias and the import
+						// for all the "Colour" enjoyers :D
 					}
-					return warn(ECustom("Import" + aliasStr + " of class " + v + " could not be added"));
-				} else {
-					imports.set(n, c);
-					if (as != null)
-						imports.set(as, c);
-					// resembles older haxe versions where you could use both the alias and the import
-					// for all the "Colour" enjoyers :D
+					return null; // yeah. -Crow
 				}
-				return null; // yeah. -Crow
 
 			case EFunction(params, fexpr, _, name, _, ass):
 				var capturedLocals = duplicate(locals);

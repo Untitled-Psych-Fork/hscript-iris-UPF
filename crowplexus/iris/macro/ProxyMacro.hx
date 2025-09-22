@@ -14,7 +14,6 @@ class ProxyMacro {
 
 	public static macro function getProxyClasses() {
 		#if (macro && !display)
-		trace(Context.getClassPath());
 		var map:Map<String, Expr> = [];
 		var standard = includeAndGetModules(PREFIX);
 		for(module in standard) {

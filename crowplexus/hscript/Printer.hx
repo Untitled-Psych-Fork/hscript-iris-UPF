@@ -501,8 +501,9 @@ class Printer {
 					add(" ");
 					expr(e);
 				}
-			case EImport(v, as):
+			case EImport(v, as, star):
 				add("import " + v);
+				if(star == true) add(".*");
 				if (as != null)
 					add(" as " + as);
 			case EArray(e, index):

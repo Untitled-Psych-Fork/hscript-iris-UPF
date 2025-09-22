@@ -485,7 +485,7 @@ class Iris implements ISharedScript {
 		parser = null;
 	}
 
-	@:noCompletion function _importHandler(s: String, alias: String): Bool {
+	@:noCompletion function _importHandler(s: String, alias: String, ?star:Bool): Bool {
 		var replacer: String = StringTools.replace(s, ".", "/");
 		#if IRIS_DEBUG
 		trace("try to importing script '" + replacer + "'");
