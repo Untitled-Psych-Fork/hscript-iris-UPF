@@ -27,18 +27,20 @@ class StarClassesMacro {
 					case TInst(_.get() => c, _):
 						var pack:String = c.pack.join(".").trim();
 						if(!pack.startsWith("crowplexus.hscript")) {
-							names.push(Context.makeExpr(pack != "" ? pack + "." + c.name : c.name, c.pos));
+							names.push(Context.parse(pack != "" ? pack + "." + c.name : c.name, c.pos));
 						}
 					case TAbstract(_.get() => c, _):
 						var pack:String = c.pack.join(".").trim();
 						if(!pack.startsWith("crowplexus.hscript")) {
-							names.push(Context.makeExpr(pack != "" ? pack + "." + c.name : c.name, c.pos));
+							names.push(Context.parse(pack != "" ? pack + "." + c.name : c.name, c.pos));
 						}
 					default:
 				}
 
-			self.meta.remove('classes');
-			self.meta.add('classes', names, self.pos);
+			self.meta.remove(':classes');
+			self.meta.add(':classes', names, self.pos);
+			self.meta.remove(":rtti");
+			self.meta.add(":rtti", [], self.pos);
 		});
 		#end
 	}

@@ -82,7 +82,7 @@ class Iris implements ISharedScript {
 	@:unreflective public static var proxyImports: Map<String, Dynamic> = crowplexus.iris.macro.ProxyMacro.getProxyClasses();
 
 	@:unreflective public static var starPackageClasses:Map<String, Array<{var name:String; var value:Dynamic;}>> = #if STAR_CLASSES {
-		var r:Array<String> = cast haxe.rtti.Meta.getType(Iris)?.classes ?? [];
+		var r:Array<String> = cast Lambda.find(haxe.rtti.Rtti.getRtti(Iris).meta, f -> f.name == ":classes")?.params ?? [];
 		var map = new Map<String, Array<{var name:String; var value:Dynamic;}>>();
 
 		for (i in r) {
