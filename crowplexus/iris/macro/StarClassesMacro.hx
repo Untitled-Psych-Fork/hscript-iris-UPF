@@ -17,10 +17,8 @@ class StarClassesMacro {
 	public static inline var thisName:String = "crowplexus.iris.Iris";
 
 	public static function build() {
-		trace("init star classes......");
 		#if STAR_CLASSES
 		Context.onGenerate(function(types) {
-			trace(types);
 			var names = [],
 				self = TypeTools.getClass(Context.getType(thisName));
 
