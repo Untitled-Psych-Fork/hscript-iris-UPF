@@ -1,7 +1,7 @@
 package crowplexus.hscript.scriptclass;
 
 class BaseScriptClass {
-	public function sc_get(name: String): Dynamic {
+	public function sc_get(name: String, isScript:Bool = false): Dynamic {
 		return null;
 	}
 

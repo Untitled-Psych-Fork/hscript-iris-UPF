@@ -1151,7 +1151,7 @@ class Parser {
 				// mk(EPackage(path.join(".")));
 				packageName = path.join(".");
 				if (this.requestedPackageName != null
-					&& StringTools.trim(this.requestedPackageName) != ""
+					//&& StringTools.trim(this.requestedPackageName) != ""
 					&& packageName != this.requestedPackageName) {
 					error(ECustom("Requested package name -> '" + this.requestedPackageName + "' Failed, Due to the package name -> '" + packageName
 						+ "' differs from the requested one"),

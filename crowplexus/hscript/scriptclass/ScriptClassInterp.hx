@@ -2,6 +2,7 @@ package crowplexus.hscript.scriptclass;
 
 import crowplexus.hscript.Interp;
 import crowplexus.iris.Iris;
+import crowplexus.hscript.proxy.ProxyType;
 import crowplexus.hscript.ISharedScript;
 
 @:access(crowplexus.hscript.Interp)
@@ -23,7 +24,7 @@ class ScriptClassInterp extends Interp {
 			}
 		}
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
-			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true);
 		if (o is ISharedScript)
 			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {
@@ -108,9 +109,9 @@ class ScriptClassInterp extends Interp {
 		}
 
 		if (this.scriptClass.sc_exists(id)) {
-			return this.scriptClass.sc_get(id);
+			return this.scriptClass.sc_get(id, true);
 		} else if (this.scriptClass.urDad.sc_exists(id)) {
-			return this.scriptClass.urDad.sc_get(id);
+			return this.scriptClass.urDad.sc_get(id, true);
 		}
 
 		if (parentInstance != null) {
@@ -129,10 +130,10 @@ class ScriptClassInterp extends Interp {
 		if (Iris.proxyImports.get(id) != null)
 			return Iris.proxyImports.get(id);
 
-		if (Interp.unpackClassCache.get(id) is Class) {
+		if (Interp.unpackClassCache.get(id) != null) {
 			return Interp.unpackClassCache.get(id);
 		} else {
-			final cl = Type.resolveClass(id);
+			final cl = ProxyType.resolveClass(id);
 			if (cl != null) {
 				Interp.unpackClassCache.set(id, cl);
 				return cl;

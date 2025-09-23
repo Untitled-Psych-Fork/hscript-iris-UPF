@@ -48,7 +48,7 @@ class ScriptClassInstance extends BaseScriptClass {
 			|| __interp.variables.exists(name);
 	}
 
-	public override function sc_get(name: String): Dynamic {
+	public override function sc_get(name: String, isScript:Bool = false): Dynamic {
 		@:privateAccess {
 			if (superClass != null) {
 				if (!overrides.contains(name) && (cacheSuperFieldsName.contains(name) || cacheSuperFieldsName.contains("get_" + name))) {
@@ -72,7 +72,7 @@ class ScriptClassInstance extends BaseScriptClass {
 				return v;
 			}
 
-			__ogInterp.error(EUnknownVariable(name));
+			if(isScript) __ogInterp.error(EUnknownVariable(name));
 			return null;
 		}
 	}

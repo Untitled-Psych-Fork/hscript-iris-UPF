@@ -107,20 +107,7 @@ class ScriptedClassMacro {
 				expr: macro {
 					var cls: crowplexus.hscript.scriptclass.ScriptClass = crowplexus.hscript.Interp.resolveScriptClass(className);
 					if (cls != null) {
-						return try {
-							cls.createInstance(args).superClass;
-						}
-						#if hscriptPos
-						catch (err:crowplexus.hscript.Expr.Error) {
-							crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false), cast {fileName: err.origin, lineNumber: err.line});
-							null;
-						}
-						#end
-					catch (e)
-						{
-							Sys.println(Std.string(e));
-							null;
-						}
+						return cls.createInstance(args).superClass;
 					}
 
 					return null;
@@ -250,21 +237,7 @@ class ScriptedClassMacro {
 							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
 								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
-								var result: Dynamic = try {
-									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
-								}
-								#if hscriptPos
-								catch (err:crowplexus.hscript.Expr.Error) {
-									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false),
-										cast {fileName: err.origin, lineNumber: err.line});
-									null;
-								}
-								#end
-							catch (e)
-								{
-									Sys.println(Std.string(e));
-									null;
-								}
+								var result: Dynamic = __sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
 								return cast result;
 							} else
 								return super.$fname($a{fnargs});
@@ -275,19 +248,7 @@ class ScriptedClassMacro {
 							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
 								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
-								try {
 									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
-								}
-								#if hscriptPos
-								catch (err:crowplexus.hscript.Expr.Error) {
-									crowplexus.iris.Iris.error(crowplexus.hscript.Printer.errorToString(err, false),
-										cast {fileName: err.origin, lineNumber: err.line});
-								}
-								#end
-							catch (e)
-								{
-									Sys.println(Std.string(e));
-								}
 							} else
 								super.$fname($a{fnargs});
 						}

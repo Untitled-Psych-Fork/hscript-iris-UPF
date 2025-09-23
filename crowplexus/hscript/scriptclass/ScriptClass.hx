@@ -20,6 +20,8 @@ class ScriptClass extends BaseScriptClass {
 		return name;
 	}
 
+	public var overrideResolve:String->Bool = null;
+
 	private var fields: Array<BydFieldDecl>;
 
 	var metas: Metadata;
@@ -56,7 +58,7 @@ class ScriptClass extends BaseScriptClass {
 			|| staticInterp.variables.exists(name);
 	}
 
-	public override function sc_get(name: String): Dynamic {
+	public override function sc_get(name: String, isScript:Bool = false): Dynamic {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
 				var l = staticInterp.propertyLinks.get(name);
@@ -74,7 +76,7 @@ class ScriptClass extends BaseScriptClass {
 				return v;
 			}
 
-			ogInterp.error(EUnknownVariable(name));
+			if(isScript) ogInterp.error(EUnknownVariable(name));
 			return null;
 		}
 	}

@@ -127,6 +127,7 @@ class Interp {
 		staticVariables = #if haxe3 new Map() #else new Hash() #end;
 		scriptClasses = #if haxe3 new Map() #else new Hash() #end;
 		scriptEnums = #if haxe3 new Map() #else new Hash() #end;
+		unpackClassCache = #if haxe3 new Map() #else new Hash() #end;
 	}
 
 	/**
@@ -632,10 +633,10 @@ class Interp {
 		if (Iris.proxyImports.get(id) != null)
 			return Iris.proxyImports.get(id);
 
-		if (unpackClassCache.get(id) is Class) {
+		if (unpackClassCache.get(id) != null) {
 			return unpackClassCache.get(id);
 		} else {
-			final cl = Type.resolveClass(id);
+			final cl = ProxyType.resolveClass(id);
 			if (cl != null) {
 				unpackClassCache.set(id, cl);
 				return cl;
@@ -1204,67 +1205,16 @@ class Interp {
 					return null;
 				}
 				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + clName : clName);
-				if (!scriptClasses.exists(fullPath)) {
-					var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, metas, pkg);
-					scriptClasses.set(cl.fullPath, cl);
-					imports.set(clName, cl);
-				} else {
-					warn(ECustom("Cannot create class with the same name, it already exists"));
-				}
+				if (!scriptClasses.exists(fullPath))
+					registerScriptClass(clName, exName, fields, metas, pkg);
 			case EEnum(enumName, fields, pkg):
 				if (!this.allowScriptEnum) {
 					warn(ECustom("Cannot create enum because it is not supported"));
 					return null;
 				}
 				var fullPath = (pkg != null && pkg.length > 0 ? pkg.join(".") + "." + enumName : enumName);
-				if (scriptEnums.exists(fullPath)) {
-					warn(ECustom("Cannot create enum with the same name, it already exists"));
-					return null;
-				}
-				var obj: crowplexus.hscript.scriptenum.ScriptEnum = new crowplexus.hscript.scriptenum.ScriptEnum(enumName, pkg);
-				for (index => field in fields) {
-					switch (field) {
-						case ESimple(name):
-							obj.sm.set(name, new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, null));
-						case EConstructor(name, params):
-							var hasOpt = false, minParams = 0;
-							for (p in params)
-								if (p.opt)
-									hasOpt = true;
-								else
-									minParams++;
-							var f = function(args: Array<Dynamic>) {
-								if (((args == null) ? 0 : args.length) != params.length) {
-									if (args.length < minParams) {
-										var str = "Invalid number of parameters. Got " + args.length + ", required " + minParams;
-										if (enumName != null)
-											str += " for enum '" + enumName + "'";
-										error(ECustom(str));
-									}
-									// make sure mandatory args are forced
-									var args2 = [];
-									var extraParams = args.length - minParams;
-									var pos = 0;
-									for (p in params)
-										if (p.opt) {
-											if (extraParams > 0) {
-												args2.push(args[pos++]);
-												extraParams--;
-											} else
-												args2.push(null);
-										} else
-											args2.push(args[pos++]);
-									args = args2;
-								}
-								return new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, args);
-							};
-							var f = Reflect.makeVarArgs(f);
-
-							obj.sm.set(name, f);
-					}
-				}
-				scriptEnums.set(fullPath, obj);
-				imports.set(enumName, obj);
+				if (!scriptEnums.exists(fullPath))
+					registerScriptEnum(enumName, fields, pkg);
 			case EDirectValue(value):
 				return value;
 			case EUsing(name):
@@ -1467,6 +1417,59 @@ class Interp {
 			}
 		}
 		return re;
+	}
+
+	function registerScriptClass(clName:String, exName:Null<String>, fields:Array<BydFieldDecl>, metas:Metadata, ?pkg:Array<String>) {
+		var cl = new crowplexus.hscript.scriptclass.ScriptClass(this, clName, exName, fields, metas, pkg);
+		scriptClasses.set(cl.fullPath, cl);
+		imports.set(clName, cl);
+	}
+
+	function registerScriptEnum(enumName:String, fields:Array<EnumType>, ?pkg:Array<String>) {
+		var obj: crowplexus.hscript.scriptenum.ScriptEnum = new crowplexus.hscript.scriptenum.ScriptEnum(enumName, pkg);
+		for (index => field in fields) {
+			switch (field) {
+				case ESimple(name):
+					obj.sm.set(name, new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, null));
+				case EConstructor(name, params):
+					var hasOpt = false, minParams = 0;
+					for (p in params)
+						if (p.opt)
+							hasOpt = true;
+						else
+							minParams++;
+					var f = function(args: Array<Dynamic>) {
+						if (((args == null) ? 0 : args.length) != params.length) {
+							if (args.length < minParams) {
+								var str = "Invalid number of parameters. Got " + args.length + ", required " + minParams;
+								if (enumName != null)
+									str += " for enum '" + enumName + "'";
+								error(ECustom(str));
+							}
+							// make sure mandatory args are forced
+							var args2 = [];
+							var extraParams = args.length - minParams;
+							var pos = 0;
+							for (p in params)
+								if (p.opt) {
+									if (extraParams > 0) {
+										args2.push(args[pos++]);
+										extraParams--;
+									} else
+										args2.push(null);
+								} else
+									args2.push(args[pos++]);
+							args = args2;
+						}
+						return new crowplexus.hscript.scriptenum.ScriptEnumValue(obj, enumName, name, index, args);
+					};
+					var f = Reflect.makeVarArgs(f);
+
+					obj.sm.set(name, f);
+			}
+		}
+		scriptEnums.set(obj.fullPath, obj);
+		imports.set(enumName, obj);
 	}
 
 	function super_call(args: Array<Dynamic>): Dynamic {
@@ -1706,7 +1709,7 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
-			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f);
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true);
 		/*@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
 			return o.__sc_standClass.sc_get(f); */
 		if (o is ISharedScript)
