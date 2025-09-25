@@ -8,6 +8,8 @@ import crowplexus.iris.ErrorSeverity;
 import crowplexus.iris.IrisConfig;
 import crowplexus.iris.utils.UsingEntry;
 import crowplexus.hscript.ISharedScript;
+import psychlua.stages.modules.ScriptedModuleNotify;
+import psychlua.stages.modules.ModuleAgency;
 
 using crowplexus.iris.utils.Ansi;
 using StringTools;
@@ -513,14 +515,40 @@ class Iris implements ISharedScript {
 
 	@:noCompletion function _importHandler(s: String, alias: String, ?star:Bool): Bool {
 		var replacer: String = StringTools.replace(s, ".", "/");
-		#if IRIS_DEBUG
-		trace("try to importing script '" + replacer + "'");
-		#end
 		if (Iris.instances.exists(replacer)) {
 			var iris = Iris.instances.get(replacer);
+			#if IRIS_DEBUG
+			trace("try to importing script '" + replacer + "'");
+			#end
 			if (iris != null) {
 				this.interp.imports.set((alias == null || StringTools.trim(alias) == "" ? Tools.last(replacer.split("/")) : alias), iris);
 				return true;
+			}
+		} else {
+			final last = s.lastIndexOf(".");
+			final p = (star == true ? s : s.substr(0, last > -1 ? last : 0));
+			#if STAR_CLASSES
+			if(star == true) {
+				@:privateAccess if(ScriptedModuleNotify.classSystems.exists(p)) {
+					for(m in ScriptedModuleNotify.classSystems.get(p)) {
+						for(id=>cl in m.unusedClasses) {
+							if(m._preClassesName.contains(id)) m.unusedClasses.remove(id);
+							m.__interp.execute(cl);
+						}
+					}
+				}
+			} else
+			#end
+			{
+				final cn = (star == true ? "" : s.substr(last > -1 ? last + 1 : 0));
+				@:privateAccess if(ScriptedModuleNotify.classSystems.exists(p)) {
+					for(m in ScriptedModuleNotify.classSystems.get(p)) {
+						if(m.unusedClasses.exists(cn)) {
+							ModuleAgency.runThrow(() -> m.__interp.execute(m.unusedClasses.get(cn)), m.origin);
+							break;
+						}
+					}
+				}
 			}
 		}
 

@@ -2,9 +2,10 @@
 	"name": "hscript-iris-improved",
 	"description": "Make New Features For HScript.",
 	"version": "0.0.1",
-	"releasenote": "Improved `using`s, improved inner class importing.",
+	"releasenote": "nothing",
 	"license": "MIT",
 	"url": "https://github.com/crowplexus/hscript-iris-improved",
+	"classPath": "src",
 	"contributors": [
 		"crowplexus",
 		"Ne_Eo",

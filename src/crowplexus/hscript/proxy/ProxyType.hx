@@ -2,6 +2,7 @@ package crowplexus.hscript.proxy;
 
 import crowplexus.hscript.scriptenum.*;
 import crowplexus.hscript.scriptclass.*;
+import psychlua.stages.modules.ScriptedModuleNotify;
 
 // TODO: for most of these, support hscript enums
 // which don't quite work, but here we are
@@ -109,6 +110,12 @@ class ProxyType {
 		The class name must not include any type parameters.
 	**/
 	public inline static function resolveClass(name: String): Dynamic {
+		@:privateAccess if(ScriptedModuleNotify.unpackUnusedClasses.exists(name)) {
+			final c = ScriptedModuleNotify.unpackUnusedClasses.get(name);
+			ScriptedModuleNotify.unpackUnusedClasses.remove(name);
+			c.m.__interp.execute(c.e);
+		}
+
 		if (crowplexus.iris.Iris.proxyImports.get(name) != null) {
 			return crowplexus.iris.Iris.proxyImports.get(name);
 		}

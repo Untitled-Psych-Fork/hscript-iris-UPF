@@ -38,7 +38,10 @@ class ScriptClass extends BaseScriptClass {
 		if (extendCls != null && ogInterp.imports.get(extendCls) is Class) {
 			this.superClassDecl = cast ogInterp.imports.get(extendCls);
 		} else if (extendCls != null && !(ogInterp.imports.get(extendCls) is Class)) {
-			@:privateAccess ogInterp.error(ECustom("Invalid Extend Class -> '" + extendCls + "'"));
+			var ex = Type.resolveClass(extendCls);
+			if(ex != null) {
+				this.superClassDecl = ex;
+			} else @:privateAccess ogInterp.error(ECustom("Invalid Extend Class -> '" + extendCls + "'"));
 		}
 		this.packages = pkg;
 

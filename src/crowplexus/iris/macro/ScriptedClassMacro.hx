@@ -237,7 +237,10 @@ class ScriptedClassMacro {
 							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
 								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
-								var result: Dynamic = __sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+								var result: Dynamic = null;
+								psychlua.stages.modules.ModuleAgency.runThrow(function() {
+									result = __sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+								});
 								return cast result;
 							} else
 								return super.$fname($a{fnargs});
@@ -248,7 +251,7 @@ class ScriptedClassMacro {
 							if (__sc_standClass != null && __sc_standClass.overrides.contains(${
 								{expr: EConst(CString(fname)), pos: Context.currentPos()}
 							})) {
-									__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);
+									psychlua.stages.modules.ModuleAgency.runThrow(function() {__sc_standClass.sc_call(${{expr: EConst(CString(fname)), pos: Context.currentPos()}}, [$a{fnargs}]);});
 							} else
 								super.$fname($a{fnargs});
 						}

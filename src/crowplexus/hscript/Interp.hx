@@ -937,8 +937,21 @@ class Interp {
 
 				#if STAR_CLASSES
 				if(star == true) {
-					final map = Iris.starPackageClasses;
-					if(map.exists(v)) for(v in map[v]) {
+					for(pa=>cl in Interp.scriptClasses) {
+						final last = pa.lastIndexOf(".");
+						final p = pa.substr(0, last > -1 ? last : 0);
+						final cn = pa.substr(last > -1 ? last + 1 : 0);
+						if(p == v) {
+							if (Iris.blocklistImports.contains(cn)) {
+								error(ECustom("You cannot add a blacklisted import, for class " + cn));
+								return null;
+							}
+
+							if (!imports.exists(cn))
+								imports.set(cn, cl);
+						}
+					}
+					if(Iris.starPackageClasses.exists(v)) for(v in Iris.starPackageClasses[v]) {
 						if (Iris.blocklistImports.contains(v.name)) {
 							error(ECustom("You cannot add a blacklisted import, for class " + v.name));
 							return null;
