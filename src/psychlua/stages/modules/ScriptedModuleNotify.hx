@@ -50,7 +50,8 @@ class ScriptedModuleNotify {
 			ScriptedModuleNotify._specifyClassFullPaths.push(_specifyClassFullPath);
 			ScriptedModuleNotify._specifyClassNames.push(_specifyClassName);
 		}
-	
+
+		_presets = new Map();
 		if(presets != null) ScriptedModuleNotify._presets = presets;
 
 		classSystems = new Map();
