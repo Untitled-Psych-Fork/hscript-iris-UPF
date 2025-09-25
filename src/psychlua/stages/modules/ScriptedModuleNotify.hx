@@ -23,13 +23,22 @@ class ScriptedModuleNotify {
 	public static var classSystems:Map<String, Array<ModuleAgency>> = [];
 	public static var unpackModules:Array<ModuleAgency> = [];
 
-	private static var unpackUnusedClasses:Map<String, {var m:ModuleAgency; var e:Expr;}> = [];
 
-	public static function init(specifyClasses:Array<Class<Dynamic>>, classPaths:Array<String>, ?includeExtension:Array<String>) {
+	private static var unpackUnusedClasses:Map<String, {var m:ModuleAgency; var e:Expr;}> = [];
+	private static var _presets:Map<String, Dynamic> = [];
+
+	public static function init(specifyClasses:Array<Class<Dynamic>>, classPaths:Array<String>, ?includeExtension:Array<String>, ?presets:Map<String, Dynamic>) {
 		Interp.clearCache();
 		errored = false;
 
-		ScriptedModuleNotify._classPaths = classPaths;
+		ScriptedModuleNotify._classPaths = [];
+
+		var displays:Array<Null<String>> = [];
+		for(ass in classPaths) {
+			final sp = ass.split("$");
+			ScriptedModuleNotify._classPaths.push(Path.addTrailingSlash(sp[0]));
+			displays.push(sp[1]);
+		}
 		if(includeExtension != null) ScriptedModuleNotify._includeExt = includeExtension;
 		ScriptedModuleNotify._specifyClasses = specifyClasses;
 		ScriptedModuleNotify._specifyClassFullPaths = [];
@@ -41,14 +50,18 @@ class ScriptedModuleNotify {
 			ScriptedModuleNotify._specifyClassFullPaths.push(_specifyClassFullPath);
 			ScriptedModuleNotify._specifyClassNames.push(_specifyClassName);
 		}
+	
+		if(presets != null) ScriptedModuleNotify._presets = presets;
 
 		classSystems = new Map();
 		unpackUnusedClasses = new Map();
 		unpackModules = [];
-		for(cp in ScriptedModuleNotify._classPaths) {
+		for(k=>cp in ScriptedModuleNotify._classPaths) {
 			_forceClassPath = cp;
+			_forceDisplayClassPath = displays[k];
 			getFiles(cp);
 			_forceClassPath = null;
+			_forceDisplayClassPath = null;
 		}
 		execute();
 	}
@@ -63,6 +76,7 @@ class ScriptedModuleNotify {
 	}
 
 	static var _forceClassPath:Null<String>;
+	static var _forceDisplayClassPath:Null<String>;
 
 	private static function getFiles(cp:String) {
 		if(FileSystem.exists(cp) && FileSystem.isDirectory(cp)) {
@@ -72,8 +86,9 @@ class ScriptedModuleNotify {
 					getFiles(path);
 				} else if(_includeExt.contains(Path.extension(file))) {
 
-					final saved = _forceClassPath.length + 1;
-					final origin = "(" + _forceClassPath + ")" + path.replace(_forceClassPath, "src");
+					final saved = _forceClassPath.length;
+					final check = (_forceDisplayClassPath != null ? _forceDisplayClassPath : _forceClassPath);
+					final origin = "(" + check + ")" + path.replace(_forceClassPath, "src/");
 					var rp = if(saved < path.lastIndexOf("/")) path.substring(saved, path.lastIndexOf("/")).replace("/", ".") else "";
 
 					final p = parse(path, origin, rp);

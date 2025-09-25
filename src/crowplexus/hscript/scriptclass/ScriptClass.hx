@@ -61,7 +61,7 @@ class ScriptClass extends BaseScriptClass {
 			|| staticInterp.variables.exists(name);
 	}
 
-	public override function sc_get(name: String, isScript:Bool = false): Dynamic {
+	public override function sc_get(name: String, isScript:Bool = false, inClass:Bool = false): Dynamic {
 		@:privateAccess {
 			if (staticInterp.propertyLinks.get(name) != null) {
 				var l = staticInterp.propertyLinks.get(name);
@@ -79,7 +79,10 @@ class ScriptClass extends BaseScriptClass {
 				return v;
 			}
 
-			if(isScript) ogInterp.error(EUnknownVariable(name));
+			if(isScript) {
+				if(!inClass) staticInterp.error(EUnknownVariable(name));
+				else staticInterp.error(ECustom("ScriptClass<" + this.fullPath + "> has no field -> '" + name + "'"));
+			}
 			return null;
 		}
 	}
@@ -168,7 +171,7 @@ class ScriptClass extends BaseScriptClass {
 						if ((decl.get != null && decl.get != "default") || (decl.set != null && decl.set != "default")) {
 							if (decl.get == "get"
 								&& Lambda.find(this.fields,
-									(f) -> f.name == ("get_" + field.name) && field.access.contains(AStatic) && field.kind.match(KFunction(_))) == null)
+									(f) -> f.name == ("get_" + field.name) && f.access.contains(AStatic) && f.kind.match(KFunction(_))) == null)
 								ogInterp.error(ECustom("No getter function found for \"" + field.name + "\" -> \"get_" + field.name + "\""));
 							if (decl.set == "set"
 								&& Lambda.find(this.fields,

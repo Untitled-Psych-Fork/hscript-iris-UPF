@@ -32,6 +32,9 @@ class ModuleAgency {
 		for(k=>cl in ScriptedModuleNotify._specifyClasses) {
 			__interp.imports.set(ScriptedModuleNotify._specifyClassNames[k], cl);
 		}
+		for(k=>v in ScriptedModuleNotify._presets) {
+			__interp.imports.set(k, v);
+		}
 		__interp.importHandler = _importHandler;
 
 		classes = [];

@@ -24,7 +24,7 @@ class ScriptClassInterp extends Interp {
 			}
 		}
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
-			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true);
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true, true);
 		if (o is ISharedScript)
 			return cast(o, ISharedScript).hget(f #if hscriptPos, this.curExpr #end);
 		return {

@@ -1722,7 +1722,7 @@ class Interp {
 		if (o == null)
 			error(EInvalidAccess(f));
 		if (o is crowplexus.hscript.scriptclass.BaseScriptClass)
-			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true);
+			return cast(o, crowplexus.hscript.scriptclass.BaseScriptClass).sc_get(f, true, true);
 		/*@:privateAccess if (o is crowplexus.hscript.scriptclass.IScriptedClass)
 			return o.__sc_standClass.sc_get(f); */
 		if (o is ISharedScript)
