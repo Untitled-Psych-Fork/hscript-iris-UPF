@@ -1,0 +1,37 @@
+//这是我用来临时测试的，无
+import samples.GroupSample;
+import samples.ObjectSample;
+import scripted.ScriptedBaseSample;
+
+class MySample extends ScriptedBaseSample {
+	var sb:Dynamic = 0;
+
+	override function working() {
+		if(this.input != null) {
+			output = "Editing Result: " + Std.string(this.input);
+		}
+	}
+
+	override function inputContent(content:Dynamic) {
+		super.inputContent(content);
+	}
+}
+
+var os = new ObjectSample();
+var sample = new MySample();
+
+trace(sample.sb);
+sample.sb++;
+trace(sample.sb);
+trace(sample);
+
+var gs = new GroupSample<BaseSample<Dynamic>>();
+gs.push(os);
+gs.push(sample);
+
+gs.inputContent({trace: "gp"});
+
+gs.working();
+trace(gs.outputs);
+trace("sample is MySample of type: " + (sample is MySample));
+trace("MySample is Class of type: " + (MySample is Class));

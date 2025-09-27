@@ -1,0 +1,14 @@
+var shot:Int = 0;
+
+function onCreate() {
+	bigShot();
+}
+
+function mathTen() {
+	bigShot();
+}
+
+function bigShot() {
+	trace(if(shot > 0) "Hello World!!" + " x" + shot else "Hello World!!");
+	shot++;
+}

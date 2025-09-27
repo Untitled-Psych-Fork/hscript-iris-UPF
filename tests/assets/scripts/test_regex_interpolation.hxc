@@ -1,0 +1,7 @@
+trace('Introduction: ${~/\*\[player\]/g.replace("Yes, *[player]", "Sir!")}');
+
+// 最近安慕希玩多了😅
+var mc_regexCommand:EReg = ~/^\/([a-z]+)(?:\s+([^\s]+))?$/;
+var mc = '/kill $interpolation_player';
+//醉了本地编译EReg少了一大堆功能，我tm还想用matched搞事呢
+trace('Is [$interpolation_player] Killed: ${mc_regexCommand.match(mc)}');

@@ -1,13 +1,14 @@
 {
-	"name": "hscript-iris",
-	"description": "a HScript Loader, built for simplicity and inclusion of missing features.",
-	"classPath": "",
-	"version": "1.1.3",
-	"releasenote": "Improved `using`s, improved inner class importing.",
+	"name": "hscript-iris-improved",
+	"description": "Make New Features For HScript.",
+	"version": "0.0.1",
+	"releasenote": "nothing",
 	"license": "MIT",
-	"url": "https://github.com/crowplexus/hscript-iris",
+	"url": "https://github.com/crowplexus/hscript-iris-improved",
+	"classPath": "src",
 	"contributors": [
 		"crowplexus",
-		"Ne_Eo"
+		"Ne_Eo",
+		"GeXie19"
 	]
 }

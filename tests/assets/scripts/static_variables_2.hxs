@@ -1,0 +1,27 @@
+//用于接受
+
+function onCreate() {
+	test("plus");
+	trace("Reading: " + plus);
+	trace("Writing: " + plus++);
+	trace(plus);
+
+	test("unchanged");
+	trace("Reading: " + unchanged);
+	trace("Writing: " + unchanged++);
+	trace(unchanged);
+
+	test("onlyConsted");
+	trace("Reading: " + onlyconsted);
+	trace("Writing: " + (onlyconsted = letGiveYourPerfect(onlyconsted)));
+	trace(onlyconsted);
+
+	test("idk");
+	trace("Reading: " + idk);
+	trace("Writing: " + idk++);
+	trace(idk);
+}
+
+function test(id:String) {
+	trace("Testing Static Field -> " + id);
+}

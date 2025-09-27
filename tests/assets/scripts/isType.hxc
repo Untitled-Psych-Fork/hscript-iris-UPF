@@ -1,0 +1,6 @@
+import samples.ObjectSample;
+
+var sample = new ObjectSample();
+var is:Bool = sample is ObjectSample;
+trace("sample is ObjectSample: " + is);
+trace("ObjectSample is Class: " + ObjectSample is Class);

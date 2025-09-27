@@ -1,0 +1,5 @@
+import samples.*;
+
+trace(ObjectSample);
+trace(IntSample);
+trace(BaseSample);
