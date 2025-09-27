@@ -6,12 +6,6 @@ a [HScript](https://github.com/HaxeFoundation/hscript) extension made to make th
 
 ---
 
-Brought to you by:
-
-- [Crow](https://github.com/crowplexus)
-- [Ne_Eo](https://github.com/NeeEoo)
-
-
 - [Setup](docs/SETUP.md)
 - [Features](docs/FEATURES.md)
 - [Usage](#usage)
