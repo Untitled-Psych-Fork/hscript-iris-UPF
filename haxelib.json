@@ -1,14 +1,15 @@
 {
-	"name": "hscript-iris-improved",
-	"description": "Make New Features For HScript.",
+	"name": "hscript-iris-UPF",
+	"description": "a Haxe Script fork, intended to add features and fix issues with the original hscript with added features for UPF.",
 	"version": "0.0.1",
 	"releasenote": "nothing",
 	"license": "MIT",
-	"url": "https://github.com/crowplexus/hscript-iris-improved",
+	"url": "https://github.com/Untitled-Psych-Fork/hscript-iris-UPF",
 	"classPath": "src",
 	"contributors": [
 		"crowplexus",
 		"Ne_Eo",
-		"GeXie19"
+		"GeXie19",
+		"bananaTiko"
 	]
 }
