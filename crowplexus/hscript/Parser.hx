@@ -78,10 +78,10 @@ class Parser {
 	/**
 		allows to check for #if / #else in code
 	**/
-	public var preprocesorValues: Map<String, Dynamic> = new Map();
+	public var preprocessorValues : Map<String,Dynamic> = new Map();
 
 	/**
-		activate JSON compatiblity
+		activate JSON compatibility
 	**/
 	public var allowJSON: Bool;
 
@@ -1302,6 +1302,14 @@ class Parser {
 							fields.push({name: name, t: parseType(), meta: meta});
 							meta = null;
 							ensure(TSemicolon);
+						case TId("final"):
+							var name = getIdent();
+							ensure(TDoubleDot);
+							if( meta == null ) meta = [];
+							meta.push({ name : ":final", params : [] });
+							fields.push( { name : name, t : parseType(), meta : meta } );
+							meta = null;
+							ensure(TSemicolon);
 						case TId(name):
 							ensure(TDoubleDot);
 							fields.push({name: name, t: parseType(), meta: meta});
@@ -2174,6 +2182,10 @@ class Parser {
 			case TQuestionDot: "?.";
 		}
 	}
+
+	@:noCompletion public var preprocesorValues(get,set) : Map<String,Dynamic>;
+	inline function get_preprocesorValues() return this.preprocessorValues;
+	inline function set_preprocesorValues(v) return this.preprocessorValues = v;
 }
 
 @:structInit

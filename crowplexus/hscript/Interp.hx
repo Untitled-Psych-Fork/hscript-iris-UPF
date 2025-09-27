@@ -25,11 +25,14 @@ package crowplexus.hscript;
 import haxe.Constraints.Function;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
+import crowplexus.hscript.IHScriptCustomBehaviour;
 import crowplexus.hscript.Tools;
 import crowplexus.iris.Iris;
 import crowplexus.iris.IrisUsingClass;
 import crowplexus.iris.utils.UsingEntry;
 import haxe.Constraints.IMap;
+import haxe.EnumTools;
+import haxe.display.Protocol.InitializeResult;
 import haxe.PosInfos;
 
 private enum Stop {
@@ -51,6 +54,12 @@ class DeclaredVar {
 }
 
 class Interp {
+	public var scriptObject(default, set):Dynamic;
+	public function set_scriptObject(v:Dynamic) {
+		__instanceFields = Type.getInstanceFields(Type.getClass(v));
+		return scriptObject = v;
+	}
+
 	#if haxe3
 	public var variables: Map<String, Dynamic>;
 	public var imports: Map<String, Dynamic>;
@@ -70,6 +79,7 @@ class Interp {
 	var declared: Array<DeclaredVar>;
 	var returnValue: Dynamic;
 
+	var __instanceFields:Array<String> = [];
 	#if hscriptPos
 	var curExpr: Expr;
 	#end
@@ -171,9 +181,23 @@ class Interp {
 		switch (Tools.expr(e1)) {
 			case EIdent(id):
 				var l = locals.get(id);
-				if (l == null)
-					setVar(id, v)
-				else {
+				if (l == null) {
+ 					if (!variables.exists(id) && scriptObject != null) {
+ 						if (Type.typeof(scriptObject) == TObject) {
+ 							Reflect.setField(scriptObject, id, v);
+ 						} else {
+ 							if (__instanceFields.contains(id)) {
+ 								Reflect.setProperty(scriptObject, id, v);
+ 							} else if (__instanceFields.contains('set_$id')) { // setter
+ 								Reflect.getProperty(scriptObject, 'set_$id')(v);
+ 							} else {
+ 								setVar(id, v);
+ 							}
+ 						}
+ 					} else {
+ 						setVar(id, v);
+ 					}
+ 				} else {
 					if (l.const != true)
 						l.r = v;
 					else
@@ -213,8 +237,15 @@ class Interp {
 			case EIdent(id):
 				var l = locals.get(id);
 				v = fop(expr(e1), expr(e2));
-				if (l == null)
-					setVar(id, v)
+				if (l == null) {
+ 					if (__instanceFields.contains(id)) {
+ 						Reflect.setProperty(scriptObject, id, v);
+ 					} else if (__instanceFields.contains('set_$id')) { // setter
+ 						Reflect.getProperty(scriptObject, 'set_$id')(v);
+ 					} else {
+ 						setVar(id, v);
+ 					}
+ 				}
 				else {
 					if (l.const != true)
 						l.r = v;
@@ -387,6 +418,7 @@ class Interp {
 			var l = locals.get(id);
 			return l.r;
 		}
+		var vars = variables.get(id);
 
 		if (variables.exists(id)) {
 			var v = variables.get(id);
@@ -396,6 +428,23 @@ class Interp {
 		if (imports.exists(id)) {
 			var v = imports.get(id);
 			return v;
+		}
+
+		if (vars == null && !variables.exists(id)) {
+			if (scriptObject != null) {
+				// search in object
+				if (id == "this") {
+					return scriptObject;
+				} else if ((Type.typeof(scriptObject) == TObject) && Reflect.hasField(scriptObject, id)) {
+					return Reflect.field(scriptObject, id);
+				} else {
+					if (__instanceFields.contains(id)) {
+						return Reflect.getProperty(scriptObject, id);
+					} else if (__instanceFields.contains('get_$id')) { // getter
+						return Reflect.getProperty(scriptObject, 'get_$id')();
+					}
+				}
+			}
 		}
 
 		error(EUnknownVariable(id));
@@ -923,28 +972,63 @@ class Interp {
 		cast(map, IMap<Dynamic, Dynamic>).set(key, value);
 	}
 
+	public static var getRedirects:Map<String, Dynamic->String->Dynamic> = [];
+	public static var setRedirects:Map<String, Dynamic->String->Dynamic->Dynamic> = [];
+
 	function get(o: Dynamic, f: String): Dynamic {
 		if (o == null)
 			error(EInvalidAccess(f));
 		return {
-			#if php
-			// https://github.com/HaxeFoundation/haxe/issues/4915
-			try {
-				Reflect.getProperty(o, f);
-			} catch (e:Dynamic) {
-				Reflect.field(o, f);
-			}
-			#else
-			Reflect.getProperty(o, f);
-			#end
+			var redirect:Dynamic->String->Dynamic = null;
+			var cl:String = switch(Type.typeof(o)) {
+					case TNull:
+						"Null";
+					case TInt:
+						"Int";
+					case TFloat:
+						"Float";
+					case TBool:
+						"Bool";
+					case _:
+						null;
+				};
+				if (getRedirects.exists(cl = Type.getClassName(Type.getClass(o))) && (redirect = getRedirects[cl]) != null) {
+					return redirect(o, f);
+				} else if (o is IHScriptCustomBehaviour) {
+					var obj = cast(o, IHScriptCustomBehaviour);
+					return obj.hget(f);
+				} else {
+					var v = null;
+					if ((v = Reflect.getProperty(o, f)) == null) v = Reflect.getProperty(Type.getClass(o), f);
+					return v;
+				}
 		}
 	}
 
 	function set(o: Dynamic, f: String, v: Dynamic): Dynamic {
-		if (o == null)
-			error(EInvalidAccess(f));
-		Reflect.setProperty(o, f, v);
-		return v;
+		if( o == null ) error(EInvalidAccess(f));
+
+			var redirect:Dynamic->String->Dynamic->Dynamic = null;
+			var cl:String = switch(Type.typeof(o)) {
+				case TNull:
+					"Null";
+				case TInt:
+					"Int";
+				case TFloat:
+					"Float";
+				case TBool:
+					"Bool";
+				case _:
+					null;
+			};
+			if (setRedirects.exists(cl = Type.getClassName(Type.getClass(o))) && (redirect = setRedirects[cl]) != null)
+				return redirect(o, f, v);
+			if (o is IHScriptCustomBehaviour) {
+				var obj = cast(o, IHScriptCustomBehaviour);
+				return obj.hset(f, v);
+			}
+			Reflect.setProperty(o,f,v);
+			return v;
 	}
 
 	/**
