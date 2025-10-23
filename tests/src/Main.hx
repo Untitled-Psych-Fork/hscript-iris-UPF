@@ -83,7 +83,6 @@ class Main {
 
 		// var printer = new Printer();
 		// trace(printer.exprToString(myScript.expr));
-		// fullTestParseEntireSourceCode()
 	}
 
 	/*
@@ -130,6 +129,56 @@ class Main {
 	static function testUsing() {
 		var myScript: Iris = new Iris(Resource.getString("assets/using.hx"), {
 			name: "using",
+			autoRun: false
+		});
+		myScript.execute();
+		myScript.call("main");
+	}
+
+	/**
+	 * Test for string interpolation in HScript.
+	**/
+	static function testStringInterpolation() {
+		function testFile() { // FILE TEST
+			trace('Testing String Interpolation, with a file');
+			var file: String = sys.io.File.getContent("./assets/strings.hx");
+			var script: Iris = new Iris(file, {name: "StringInterpolationTest"});
+			script.call("main", []);
+		}
+		function testPureString() { // STRING TEST
+			trace('...With a pure string');
+			var source: String = "function main() {
+				trace('Program Start!');
+
+				var hello = 'Hello!';
+
+				trace('test 1, basic interpolation: $hello');
+				var tally = {
+					score: 10,
+					hits: 5,
+					misses: 0,
+				};
+				var stats = 'Score:${tally.score}';
+				trace('test 2, bracket interpolation: $stats');
+				stats = 'Score:${tally.score} - Hits:${tally.hits} - Misses:${tally.misses}';
+				trace('test 3, bracket interpolation with multiple strings: $stats');
+
+				trace('test 4, escaped interpolation: $${caw}');
+
+				trace('test 5, nested interpolation: ${'${tally.score}'}');
+			}";
+			var source: Iris = new Iris(source, {name: "StringInterpolationTestSource", autoRun: false});
+			source.execute();
+			source.call("main", []);
+		}
+	}
+
+	/**
+	 * Test for Hscript - function.bind()
+	 */
+	static function testBind() {
+		var myScript: Iris = new Iris(Resource.getString("assets/bind.hx"), {
+			name: "bind",
 			autoRun: false
 		});
 		myScript.execute();

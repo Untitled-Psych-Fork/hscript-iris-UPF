@@ -22,6 +22,7 @@
 
 package crowplexus.hscript;
 
+import haxe.Constraints.Function;
 import Type.ValueType;
 import crowplexus.hscript.Expr;
 import crowplexus.hscript.IHScriptCustomBehaviour;
@@ -632,13 +633,52 @@ class Interp {
 					args.push(expr(p));
 				switch (Tools.expr(e)) {
 					case EField(e, f, s):
-						var obj = expr(e);
-						if (obj == null)
-							if (!s)
-								error(EInvalidAccess(f));
-						return fcall(obj, f, args);
+						var obj: Dynamic = expr(e);
+
+						if (obj == null) {
+							if (s == true)
+								return null;
+							error(EInvalidAccess(f));
+						}
+
+						if (f == "bind" && Reflect.isFunction(obj)) {
+							var obj: Function = obj;
+							if (params.length == 0) { // Special case for function.bind()
+								return Reflect.makeVarArgs(function(ar: Array<Dynamic>) {
+									return obj();
+								});
+							}
+
+							// bind(_, false) => function(a1) return obj(a1, false);
+							// bind(false, _) => function(a2) return obj(false, a2);
+							// bind(_, _) => function(a1, a2) return obj(a1, a2);
+
+							var totalNeeded = 0;
+							var args = [];
+							for (p in params) {
+								switch (Tools.expr(p)) {
+									case EIdent(_):
+										args.push(null);
+										totalNeeded++;
+									default:
+										args.push(p);
+								}
+							}
+							var me = this;
+							// TODO: make it increment the depth?
+							return Reflect.makeVarArgs(function(ar: Array<Dynamic>) {
+								if (ar.length < totalNeeded)
+									error(ECustom("Too few arguments")); // TODO: make it say like "Not enough arguments, expected a:Int"
+								var i = 0;
+								var actualArgs = [for (a in args) if (a != null) me.expr(a) else ar[i++]];
+								return Reflect.callMethod(null, obj, actualArgs);
+							});
+						}
+
+						return fcall(obj, f, [for (p in params) expr(p)]);
 					default:
-						return call(null, expr(e), args);
+						var field = expr(e);
+						return call(null, field, [for (p in params) expr(p)]);
 				}
 			case EIf(econd, e1, e2):
 				return if (expr(econd) == true) expr(e1) else if (e2 == null) null else expr(e2);
@@ -648,8 +688,8 @@ class Interp {
 			case EDoWhile(econd, e):
 				doWhileLoop(econd, e);
 				return null;
-			case EFor(v, it, e):
-				forLoop(v, it, e);
+			case EFor(i, v, it, e):
+				forLoop(i, v, it, e);
 				return null;
 			case EBreak:
 				throw SBreak;
@@ -959,14 +999,52 @@ class Interp {
 		return v;
 	}
 
-	function forLoop(n, it, e) {
+	function makeKVIterator(v: Dynamic): Null<KeyValueIterator<Dynamic, Dynamic>> {
+		#if ((flash && !flash9) || (php && !php7 && haxe_ver < '4.0.0'))
+		if (v.keyValueIterator != null) {
+			return v.keyValueIterator();
+		} else {
+			if (v.iterator != null) {
+				v = v.iterator();
+			}
+		}
+		#else
+		try {
+			return v.keyValueIterator();
+		} catch (e:Dynamic) {
+			try {
+				v = v.iterator();
+			} catch (e:Dynamic) {};
+		};
+		#end
+		if (v.hasNext == null || v.next == null)
+			error(EInvalidKVIterator(v));
+		return v;
+	}
+
+	function forLoop(n, v, itExpr, e) {
 		var old = declared.length;
 		declared.push({n: n, old: locals.get(n)});
-		var it = makeIterator(expr(it));
+		var keyValue: Bool = false;
+		if (v != null) {
+			keyValue = true;
+			declared.push({n: v, old: locals.get(v)});
+		}
+		var it = (keyValue ? makeKVIterator : makeIterator)(expr(itExpr));
 		var _itHasNext = it.hasNext;
 		var _itNext = it.next;
 		while (_itHasNext()) {
-			locals.set(n, {r: _itNext(), const: false});
+			if (keyValue) {
+				var next = _itNext();
+				if (next.key == null || next.value == null) {
+					var nulled: String = (next.key == null ? 'key' : 'value');
+					error(ECustom('${Std.isOfType(next, Int) ? 'Int' : Type.getClassName(Type.getClass(next))} has no field $nulled'));
+				}
+				locals.set(n, {r: next.key, const: false});
+				locals.set(v, {r: next.value, const: false});
+			} else {
+				locals.set(n, {r: _itNext(), const: false});
+			}
 			try {
 				expr(e);
 			} catch (err: Stop) {

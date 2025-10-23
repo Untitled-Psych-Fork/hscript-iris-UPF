@@ -24,5 +24,6 @@
 --resource assets/static_test1.hx@assets/static_test1.hx
 --resource assets/static_test2.hx@assets/static_test2.hx
 --resource assets/test.hx@assets/test.hx
+--resource assets/bind.hx@assets/bind.hx
 
 ../extraParams.hxml
