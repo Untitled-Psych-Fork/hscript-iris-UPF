@@ -78,10 +78,10 @@ class Parser {
 	/**
 		allows to check for #if / #else in code
 	**/
-	public var preprocesorValues: Map<String, Dynamic> = new Map();
+	public var preprocessorValues: Map<String, Dynamic> = new Map();
 
 	/**
-		activate JSON compatiblity
+		activate JSON compatibility
 	**/
 	public var allowJSON: Bool;
 
@@ -113,6 +113,9 @@ class Parser {
 	var ops: Array<Bool>;
 	var idents: Array<Bool>;
 	var uid: Int = 0;
+	var abductCount: Int = 0;
+	var abducts = ["function", "if", "for", "while", "try", "switch"];
+	var sureStaticModifier: Bool = false;
 
 	#if hscriptPos
 	var origin: String;
@@ -132,6 +135,7 @@ class Parser {
 	var tokens: haxe.FastList<Token>;
 	#end
 	#end
+
 	public function new() {
 		line = 1;
 		opChars = "+*/-=!><&|^%~";
@@ -182,6 +186,9 @@ class Parser {
 	}
 
 	public inline function error(err, pmin, pmax) {
+		if (sureStaticModifier) sureStaticModifier = false;
+		if (abductCount > 0) abductCount = 0;
+
 		if (!resumeErrors)
 			#if hscriptPos
 			throw new Error(err, pmin, pmax, origin, line);
@@ -195,7 +202,7 @@ class Parser {
 	}
 
 	function initParser(origin) {
-		// line=1 - don't reset line : it might be set manualy
+		// line=1 - don't reset line : it might be set manually
 		preprocStack = [];
 		#if hscriptPos
 		this.origin = origin;
@@ -332,8 +339,8 @@ class Parser {
 			return false;
 		return switch (expr(e)) {
 			case EBlock(_), EObject(_), ESwitch(_), EEnum(_, _): true;
-			case EFunction(_, e, _, _): isBlock(e);
-			case EVar(_, t, e, _): e != null ? isBlock(e) : t != null ? t.match(CTAnon(_)) : false;
+			case EFunction(_, e, _, _, _): isBlock(e);
+			case EVar(_, t, e, _, _, _, _): e != null ? isBlock(e) : t != null ? t.match(CTAnon(_)) : false;
 			case EIf(_, e1, e2): if (e2 != null) isBlock(e2) else isBlock(e1);
 			case EBinop(_, _, e): isBlock(e);
 			case EUnop(_, prefix, e): !prefix && isBlock(e);
@@ -486,7 +493,9 @@ class Parser {
 		#end
 		switch (tk) {
 			case TId(id):
+				if (abducts.contains(id)) abductCount++;
 				var e = parseStructure(id);
+				if (abducts.contains(id)) abductCount--;
 				if (e == null)
 					e = mk(EIdent(id));
 				return parseExprNext(e);
@@ -501,7 +510,9 @@ class Parser {
 				tk = token();
 				if (tk == TPClose) {
 					ensureToken(TOp("->"));
+					abductCount++;
 					var eret = parseExpr();
+					abductCount--;
 					return mk(EFunction([], mk(EReturn(eret), p1)), p1);
 				}
 				push(tk);
@@ -565,6 +576,7 @@ class Parser {
 						push(tk);
 				}
 				var a = new Array();
+				abductCount++;
 				while (true) {
 					parseFullExpr(a);
 					tk = token();
@@ -572,6 +584,7 @@ class Parser {
 						break;
 					push(tk);
 				}
+				abductCount--;
 				return mk(EBlock(a), p1);
 			case TOp(op):
 				if (op == "-") {
@@ -737,10 +750,70 @@ class Parser {
 						push(TSemicolon);
 				}
 				mk(EIf(cond, e1, e2), p1, (e2 == null) ? tokenMax : pmax(e2));
+			case "static":
+				if (abductCount == 0) {
+					var t = token();
+					switch (t) {
+						case TId(byd):
+							if (byd == "var" || byd == "final" || byd == "function") {
+								sureStaticModifier = true;
+								var ret = parseStructure(byd);
+								sureStaticModifier = false;
+								return ret;
+							} else if (byd == "inline") {
+								if (!maybe(TId("function")))
+									return unexpected(TId(byd));
+								sureStaticModifier = true;
+								var ret = parseStructure("function");
+								sureStaticModifier = false;
+								return ret;
+							} else unexpected(TId(byd));
+						default: unexpected(t);
+					}
+				} else error(ECustom('Cannot Set-up "$id" In Local.'), tokenMin, tokenMax);
+				null;
 			case "var", "final":
+				var getter: String = "default";
+				var setter: String = "default";
 				var ident = getIdent();
 				var tk = token();
 				var t = null;
+				if (tk == TPOpen) {
+					if (abductCount == 0 && id == "var") {
+						var getter1: Null<String> = null;
+						var setter1: Null<String> = null;
+						var displayComma: Bool = false;
+						var closed: Bool = false;
+						while (true) {
+							var t = token();
+							switch (t) {
+								case TComma:
+									if (getter1 != null && !displayComma) {
+										displayComma = true;
+									} else unexpected(t);
+								case TId(byd):
+									if (getter1 == null && !displayComma) {
+										if (byd == "get" || byd == "never" || byd == "default" || byd == "null") {
+											getter1 = byd;
+										} else unexpected(t);
+									} else if (setter1 == null && displayComma) {
+										if (byd == "set" || byd == "never" || byd == "default" || byd == "null") {
+											setter1 = byd;
+										} else unexpected(t);
+									} else unexpected(t);
+								case TPClose:
+									if (getter1 != null && setter1 != null) closed = true;
+									else unexpected(t);
+								default:
+									unexpected(t);
+							}
+							if (closed) break;
+						}
+						if (getter1 != null) getter = getter1;
+						if (setter1 != null) setter = setter1;
+						tk = token();
+					} else unexpected(tk);
+				}
 				if (tk == TDoubleDot && allowTypes) {
 					t = parseType();
 					tk = token();
@@ -750,7 +823,7 @@ class Parser {
 					e = parseExpr();
 				else
 					push(tk);
-				mk(EVar(ident, t, e, id == "final"), p1, (e == null) ? tokenMax : pmax(e));
+				mk(EVar(ident, t, e, getter, setter, id == "final", abductCount == 0 ? sureStaticModifier : false), p1, (e == null) ? tokenMax : pmax(e));
 			case "while":
 				var econd = parseExpr();
 				var e = parseExpr();
@@ -784,9 +857,29 @@ class Parser {
 			case "continue": mk(EContinue);
 			case "else": unexpected(TId(id));
 			case "inline":
-				if (!maybe(TId("function")))
-					unexpected(TId("inline"));
-				return parseStructure("function");
+				var t = token();
+				switch (t) {
+					case TId(id):
+						if (id == "static") {
+							if (!sureStaticModifier && abductCount == 0) {
+								var t = token();
+								switch (t) {
+									case TId(byd):
+										if (byd == "function") {
+											sureStaticModifier = true;
+											var ret = parseStructure(byd);
+											sureStaticModifier = false;
+											return ret;
+										} else unexpected(TId(id));
+									default: unexpected(t);
+								}
+							}
+						} else if (id == "function") {
+							return parseStructure("function");
+						}
+					default:
+				}
+				unexpected(t);
 			case "function":
 				var tk = token();
 				var name = null;
@@ -795,7 +888,7 @@ class Parser {
 					default: push(tk);
 				}
 				var inf = parseFunctionDecl();
-				mk(EFunction(inf.args, inf.body, name, inf.ret), p1, pmax(inf.body));
+				mk(EFunction(inf.args, inf.body, name, inf.ret, abductCount == 0 ? sureStaticModifier : false), p1, pmax(inf.body));
 			case "return":
 				var tk = token();
 				push(tk);
@@ -853,9 +946,6 @@ class Parser {
 									case TComma:
 										// next expr
 									case TId("if"):
-										// if( Type.enumEq(e, EIdent("_")) )
-										//	unexpected(TId("if"));
-
 										var e = parseExpr();
 										c.ifExpr = e;
 										switch tk = token() {
@@ -887,7 +977,6 @@ class Parser {
 							}
 							c.expr = if (exprs.length == 1) exprs[0]; else if (exprs.length == 0) mk(EBlock([]), tokenMin,
 								tokenMin); else mk(EBlock(exprs), pmin(exprs[0]), pmax(exprs[exprs.length - 1]));
-
 							for (i in c.values) {
 								switch Tools.expr(i) {
 									case EIdent("_"):
@@ -926,7 +1015,6 @@ class Parser {
 				var path = [getIdent()];
 				var asStr: String = null;
 				var star: Bool = false;
-
 				while (true) {
 					var t = token();
 					if (t != TDot) {
@@ -940,9 +1028,7 @@ class Parser {
 						default: unexpected(t);
 					}
 				}
-
 				final asErr = " -> " + path.join(".") + " as " + asStr;
-
 				if (maybe(TId("as"))) {
 					asStr = getIdent();
 					final uppercased: Bool = asStr.charAt(0) == asStr.charAt(0).toUpperCase();
@@ -951,25 +1037,13 @@ class Parser {
 					if (!uppercased)
 						error(ECustom("Import aliases must begin with an uppercase letter." + asErr), readPos, readPos);
 				}
-				// trace(asStr);
-				/*
-					if (token() != TSemicolon) {
-						error(ECustom("Missing semicolon at the end of a \"import\" declaration. -> "+asErr), readPos, readPos);
-						null;
-					}
-				 */
 				mk(EImport(path.join('.'), asStr));
-
 			case "enum":
 				var name = getIdent();
-
 				ensure(TBrOpen);
-
 				var fields = [];
-
 				var currentName = "";
 				var currentArgs: Array<Argument> = null;
-
 				while (true) {
 					var tk = token();
 					switch (tk) {
@@ -978,7 +1052,6 @@ class Parser {
 						case TSemicolon | TComma:
 							if (currentName == "")
 								continue;
-
 							if (currentArgs != null && currentArgs.length > 0) {
 								fields.push(EnumType.EConstructor(currentName, currentArgs));
 								currentArgs = null;
@@ -1001,27 +1074,11 @@ class Parser {
 							currentName = name;
 					}
 				}
-
 				mk(EEnum(name, fields));
 			case "typedef":
-				// typedef Name = Type;
-
-				/*
-					Ignore parsing if its, typedef Name = {
-						> Person
-						var name:String;
-						var age:Int;
-					}
-
-					If the value is a class then it will be parsed as a EVar(Name, value);
-				 */
-
 				var name = getIdent();
-
 				ensureToken(TOp("="));
-
 				var t = parseType();
-
 				switch (t) {
 					case CTAnon(_) | CTExtend(_) | CTIntersection(_) | CTFun(_):
 						mk(EIgnore(true));
@@ -1030,10 +1087,8 @@ class Parser {
 						var params = tp.params;
 						if (params != null && params.length > 1)
 							error(ECustom("Typedefs can't have parameters"), tokenMin, tokenMax);
-
 						if (path.length == 0)
 							error(ECustom("Typedefs can't be empty"), tokenMin, tokenMax);
-
 						{
 							var className = path.join(".");
 							var cl = Tools.getClass(className);
@@ -1041,33 +1096,26 @@ class Parser {
 								return mk(EVar(name, null, mk(EDirectValue(cl))));
 							}
 						}
-
 						var expr = mk(EIdent(path.shift()));
 						while (path.length > 0) {
 							expr = mk(EField(expr, path.shift(), false));
 						}
-
-						// todo? add import to the beginning of the file?
 						mk(EVar(name, null, expr));
 					default:
 						error(ECustom("Typedef, unknown type " + t), tokenMin, tokenMax);
 						null;
 				}
-
 			case "using":
 				var path = parsePath();
 				mk(EUsing(path.join(".")));
 			case "package":
-				// ignore package
 				var tk = token();
 				push(tk);
 				packageName = "";
 				if (tk == TSemicolon)
 					return mk(EIgnore(false));
-
 				var path = parsePath();
-				// mk(EPackage(path.join(".")));
-				packageName = path.join(".");
+ 				packageName = path.join(".");
 				mk(EIgnore(false));
 			default:
 				null;
@@ -1079,19 +1127,21 @@ class Parser {
 		switch (tk) {
 			case TOp(op):
 				if (op == "->") {
-					// single arg reinterpretation of `f -> e` , `(f) -> e` and `(f:T) -> e`
 					switch (expr(e1)) {
 						case EIdent(i), EParent(expr(_) => EIdent(i)):
+							abductCount++;
 							var eret = parseExpr();
+							abductCount--;
 							return mk(EFunction([{name: i}], mk(EReturn(eret), pmin(eret))), pmin(e1));
 						case ECheckType(expr(_) => EIdent(i), t):
+							abductCount++;
 							var eret = parseExpr();
+							abductCount--;
 							return mk(EFunction([{name: i, t: t}], mk(EReturn(eret), pmin(eret))), pmin(e1));
 						default:
 					}
 					unexpected(tk);
 				}
-
 				if (opPriority.get(op) == -1) {
 					if (isBlock(e1) || switch (expr(e1)) {
 							case EParent(_): true;
@@ -1099,7 +1149,7 @@ class Parser {
 						}) {
 						push(tk);
 						return e1;
-						}
+					}
 					return parseExprNext(mk(EUnop(op, false, e1), pmin(e1)));
 				}
 				return makeBinop(op, e1, parseExpr());
@@ -1240,20 +1290,16 @@ class Parser {
 				}));
 			case TPOpen:
 				var a = token(), b = token();
-
 				push(b);
 				push(a);
-
 				function withReturn(args) {
-					switch token() { // I think it wouldn't hurt if ensure used enumEq
+					switch token() {
 						case TOp('->'):
 						case t:
 							unexpected(t);
 					}
-
 					return CTFun(args, parseType());
 				}
-
 				switch [a, b] {
 					case [TPClose, _] | [TId(_), TDoubleDot]:
 						var args = [
@@ -1263,18 +1309,15 @@ class Parser {
 									case v:
 										error(ECustom('Default values not allowed in function types'), #if hscriptPos v.pmin, v.pmax #else 0, 0 #end);
 								}
-
 								CTNamed(arg.name, if (arg.opt) CTOpt(arg.t) else arg.t);
 							}
 						];
-
 						return withReturn(args);
 					default:
 						var t = parseType();
 						return switch token() {
 							case TComma:
 								var args = [t];
-
 								while (true) {
 									args.push(parseType());
 									if (!maybe(TComma))
@@ -1288,7 +1331,6 @@ class Parser {
 						}
 				}
 			case TBrOpen:
-				var curType = null;
 				var fields = [];
 				var tps = [];
 				var meta = null;
@@ -1299,6 +1341,14 @@ class Parser {
 						case TId("var"):
 							var name = getIdent();
 							ensure(TDoubleDot);
+							fields.push({name: name, t: parseType(), meta: meta});
+							meta = null;
+							ensure(TSemicolon);
+						case TId("final"):
+							var name = getIdent();
+							ensure(TDoubleDot);
+							if (meta == null) meta = [];
+							meta.push({name: ":final", params: []});
 							fields.push({name: name, t: parseType(), meta: meta});
 							meta = null;
 							ensure(TSemicolon);
@@ -1414,6 +1464,8 @@ class Parser {
 			switch (tk) {
 				case TMeta(name):
 					meta.push({name: name, params: parseMetaArgs()});
+				case TId("final"):
+					meta.push({name: ":final", params: []});
 				default:
 					push(tk);
 					break;
@@ -1475,7 +1527,6 @@ class Parser {
 				var params = parseParams();
 				var extend = null;
 				var implement = [];
-
 				while (true) {
 					var t = token();
 					switch (t) {
@@ -1488,12 +1539,10 @@ class Parser {
 							break;
 					}
 				}
-
 				var fields = [];
 				ensure(TBrOpen);
 				while (!maybe(TBrClose))
 					fields.push(parseField());
-
 				return DClass({
 					name: name,
 					meta: meta,
@@ -1564,7 +1613,6 @@ class Parser {
 					}
 					var type = maybe(TDoubleDot) ? parseType() : null;
 					var expr = maybe(TOp("=")) ? parseExpr() : null;
-
 					if (expr != null) {
 						if (isBlock(expr))
 							maybe(TSemicolon);
@@ -1574,7 +1622,6 @@ class Parser {
 						maybe(TSemicolon);
 					} else
 						ensure(TSemicolon);
-
 					return {
 						name: name,
 						meta: meta,
@@ -1702,24 +1749,24 @@ class Parser {
 	}
 
 	function token() {
-	#if hscriptPos
-	var t = tokens.pop();
-	if (t != null) {
-		tokenMin = t.min;
-		tokenMax = t.max;
-		return t.t;
-	}
-	oldTokenMin = tokenMin;
-	oldTokenMax = tokenMax;
-	tokenMin = (this.char < 0) ? readPos : readPos - 1;
-	var t = _token();
-	tokenMax = (this.char < 0) ? readPos - 1 : readPos - 2;
-	return t;
-	} function _token() {
-	#else
-	if (!tokens.isEmpty())
-		return tokens.pop();
-	#end
+		#if hscriptPos
+		var t = tokens.pop();
+		if (t != null) {
+			tokenMin = t.min;
+			tokenMax = t.max;
+			return t.t;
+		}
+		oldTokenMin = tokenMin;
+		oldTokenMax = tokenMax;
+		tokenMin = (this.char < 0) ? readPos : readPos - 1;
+		var t = _token();
+		tokenMax = (this.char < 0) ? readPos - 1 : readPos - 2;
+		return t;
+		} function _token() {
+		#else
+		if (!tokens.isEmpty())
+			return tokens.pop();
+		#end
 		var char;
 		if (this.char < 0)
 			char = readChar();
@@ -1817,9 +1864,6 @@ class Parser {
 										case '_'.code:
 										default:
 											this.char = char;
-											// we allow to parse hexadecimal Int32 in Neko, but when the value will be
-											// evaluated by Interpreter, a failure will occur if no Int32 operation is
-											// performed
 											var v = try CInt(haxe.Int32.toInt(n)) catch (e:Dynamic) CInt32(n);
 											return TConst(v);
 									}
@@ -1852,9 +1896,6 @@ class Parser {
 										case '_'.code:
 										default:
 											this.char = char;
-											// we allow to parse binary Int32 in Neko, but when the value will be
-											// evaluated by Interpreter, a failure will occur if no Int32 operation is
-											// performed
 											var v = try CInt(haxe.Int32.toInt(n)) catch (e:Dynamic) CInt32(n);
 											return TConst(v);
 									}
@@ -2004,7 +2045,7 @@ class Parser {
 	}
 
 	function preprocValue(id: String): Dynamic {
-		return preprocesorValues.get(id);
+		return preprocessorValues.get(id);
 	}
 
 	var preprocStack: Array<PreprocessStackValue>;
@@ -2082,11 +2123,9 @@ class Parser {
 		while (true) {
 			var tk = token();
 			if (tk == TEof) {
-				// @see https://github.com/CodenameCrew/hscript-improved/pull/5/
 				if (preprocStack.length != 0) {
 					error(EInvalidPreprocessor("Unclosed"), pos, pos);
 				} else {
-					//  trace("line: " + pos);
 					break;
 				}
 			}
@@ -2174,6 +2213,10 @@ class Parser {
 			case TQuestionDot: "?.";
 		}
 	}
+
+	// @:noCompletion public var preprocessorValues(get, set): Map<String, Dynamic>;
+	inline function get_preprocessorValues() return this.preprocessorValues;
+	inline function set_preprocessorValues(v) return this.preprocessorValues = v;
 }
 
 @:structInit

@@ -371,7 +371,7 @@ class Bytes {
 			case EIdent(v):
 				doEncodeExprType(EIdent);
 				doEncodeString(v);
-			case EVar(n, _, e, c):
+			case EVar(n, _, e, getter, setter, c, s):
 				doEncodeExprType(EVar);
 				doEncodeString(n);
 				if (e == null)
